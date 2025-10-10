@@ -1,0 +1,1456 @@
+{
+	"info": {
+		"_postman_id": "financial-api-collection",
+		"name": "Financial Application API",
+		"description": "Comprehensive collection of all Financial Application APIs including Accounts, Categories, Transactions, Loans, Recurring Expenses, Dashboard, Meta, and Reports",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Accounts",
+			"item": [
+				{
+					"name": "Get All Accounts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts"]
+						}
+					}
+				},
+				{
+					"name": "Create Account",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"My Wallet\",\n  \"type\": \"wallet\",\n  \"initialBalance\": 1000.00,\n  \"currency\": \"USD\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts"]
+						}
+					}
+				},
+				{
+					"name": "Get Account By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get All Active Accounts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/active",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "active"]
+						}
+					}
+				},
+				{
+					"name": "Get Accounts By Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/type/wallet",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "type", "wallet"]
+						}
+					}
+				},
+				{
+					"name": "Get Active Accounts By Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/active/type/wallet",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "active", "type", "wallet"]
+						}
+					}
+				},
+				{
+					"name": "Get Accounts Included In Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/included-in-balance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "included-in-balance"]
+						}
+					}
+				},
+				{
+					"name": "Get Total Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/total-balance",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "total-balance"]
+						}
+					}
+				},
+				{
+					"name": "Get Total Balance By Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/total-balance/type/wallet",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "total-balance", "type", "wallet"]
+						}
+					}
+				},
+				{
+					"name": "Search Accounts By Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/search?name=wallet",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "search"],
+							"query": [
+								{
+									"key": "name",
+									"value": "wallet"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Active Accounts By Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/active/search?name=wallet",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "active", "search"],
+							"query": [
+								{
+									"key": "name",
+									"value": "wallet"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Account",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"My Updated Wallet\",\n  \"type\": \"WALLET\",\n  \"balance\": 1500.00,\n  \"currency\": \"USD\",\n  \"status\": \"ACTIVE\",\n  \"includeInBalance\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "1"]
+						}
+					}
+				},
+				{
+					"name": "Update Account Balance",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/1/balance?balance=2000.00",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "1", "balance"],
+							"query": [
+								{
+									"key": "balance",
+									"value": "2000.00"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Add To Account Balance",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/1/add?amount=500.00",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "1", "add"],
+							"query": [
+								{
+									"key": "amount",
+									"value": "500.00"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Subtract From Account Balance",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/1/subtract?amount=300.00",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "1", "subtract"],
+							"query": [
+								{
+									"key": "amount",
+									"value": "300.00"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Account",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories?page=0&size=20&sort=name,asc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "sort",
+									"value": "name,asc"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Active Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/active",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "active"]
+						}
+					}
+				},
+				{
+					"name": "Get Categories By Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/type/expense",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "type", "expense"]
+						}
+					}
+				},
+				{
+					"name": "Get Active Categories By Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/active/type/income",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "active", "type", "income"]
+						}
+					}
+				},
+				{
+					"name": "Get Category By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1"]
+						}
+					}
+				},
+				{
+					"name": "Search Categories By Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/search?name=food",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "search"],
+							"query": [
+								{
+									"key": "name",
+									"value": "food"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Active Categories By Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/active/search?name=food",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "active", "search"],
+							"query": [
+								{
+									"key": "name",
+									"value": "food"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Groceries\",\n  \"type\": \"EXPENSE\",\n  \"description\": \"Food and household items\",\n  \"color\": \"#FF5722\",\n  \"icon\": \"shopping-cart\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories"]
+						}
+					}
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Food & Groceries\",\n  \"type\": \"EXPENSE\",\n  \"description\": \"Updated description\",\n  \"color\": \"#FF5722\",\n  \"icon\": \"shopping-cart\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1"]
+						}
+					}
+				},
+				{
+					"name": "Deactivate Category",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1/deactivate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1", "deactivate"]
+						}
+					}
+				},
+				{
+					"name": "Activate Category",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1/activate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1", "activate"]
+						}
+					}
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Transactions",
+			"item": [
+				{
+					"name": "Get All Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions?page=0&size=20&sort=transactionDate,desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "sort",
+									"value": "transactionDate,desc"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Last 5 Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/last-5",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "last-5"]
+						}
+					}
+				},
+				{
+					"name": "Get Last N Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/last?limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "last"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Transaction By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Transactions By Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/account/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "account", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Transactions By Account (Paginated)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/account/1/paginated?page=0&size=20&sort=transactionDate,desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "account", "1", "paginated"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "sort",
+									"value": "transactionDate,desc"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Last N Transactions By Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/account/1/last?limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "account", "1", "last"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Transactions By Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/type/expense",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "type", "expense"]
+						}
+					}
+				},
+				{
+					"name": "Get Transactions By Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/category/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "category", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Transactions By Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/date-range?startDate=2024-01-01T00:00:00&endDate=2024-12-31T23:59:59",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "date-range"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01T00:00:00"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31T23:59:59"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Transactions By Amount Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/amount-range?minAmount=100&maxAmount=500",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "amount-range"],
+							"query": [
+								{
+									"key": "minAmount",
+									"value": "100"
+								},
+								{
+									"key": "maxAmount",
+									"value": "500"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Transactions By Description",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/search?description=coffee",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "search"],
+							"query": [
+								{
+									"key": "description",
+									"value": "coffee"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Total Amount By Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/total-amount/type/expense",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "total-amount", "type", "expense"]
+						}
+					}
+				},
+				{
+					"name": "Get Total Income By Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/account/1/total-income",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "account", "1", "total-income"]
+						}
+					}
+				},
+				{
+					"name": "Get Total Expense By Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/account/1/total-expense",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "account", "1", "total-expense"]
+						}
+					}
+				},
+				{
+					"name": "Create Transaction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": 1,\n  \"categoryId\": 1,\n  \"type\": \"EXPENSE\",\n  \"amount\": 50.00,\n  \"description\": \"Grocery shopping\",\n  \"transactionDate\": \"2024-10-10T14:30:00\",\n  \"notes\": \"Weekly groceries\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions"]
+						}
+					}
+				},
+				{
+					"name": "Update Transaction",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": 1,\n  \"categoryId\": 1,\n  \"type\": \"EXPENSE\",\n  \"amount\": 60.00,\n  \"description\": \"Updated grocery shopping\",\n  \"transactionDate\": \"2024-10-10T14:30:00\",\n  \"notes\": \"Updated notes\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "1"]
+						}
+					}
+				},
+				{
+					"name": "Delete Transaction",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/transactions/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "transactions", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Loans",
+			"item": [
+				{
+					"name": "Get All Loans",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans?page=0&size=20&sort=loanDate,desc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "sort",
+									"value": "loanDate,desc"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Loan By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Loans By Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/type/lent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "type", "lent"]
+						}
+					}
+				},
+				{
+					"name": "Get Loans By Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/status/active",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "status", "active"]
+						}
+					}
+				},
+				{
+					"name": "Get Loans By Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/account/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "account", "1"]
+						}
+					}
+				},
+				{
+					"name": "Search Loans By Person Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/search?personName=John",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "search"],
+							"query": [
+								{
+									"key": "personName",
+									"value": "John"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Loan",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": 1,\n  \"loanType\": \"LENT\",\n  \"personName\": \"John Doe\",\n  \"principalAmount\": 1000.00,\n  \"totalAmount\": 1000.00,\n  \"amountPaid\": 0,\n  \"loanDate\": \"2024-10-10T10:00:00\",\n  \"dueDate\": \"2024-12-10T10:00:00\",\n  \"description\": \"Personal loan\",\n  \"status\": \"ACTIVE\",\n  \"isUrgent\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/loans",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans"]
+						}
+					}
+				},
+				{
+					"name": "Update Loan",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountId\": 1,\n  \"loanType\": \"LENT\",\n  \"personName\": \"John Doe\",\n  \"principalAmount\": 1000.00,\n  \"totalAmount\": 1000.00,\n  \"amountPaid\": 500.00,\n  \"loanDate\": \"2024-10-10T10:00:00\",\n  \"dueDate\": \"2024-12-10T10:00:00\",\n  \"description\": \"Updated personal loan\",\n  \"status\": \"ACTIVE\",\n  \"isUrgent\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1"]
+						}
+					}
+				},
+				{
+					"name": "Record Loan Payment",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1/payment?paymentAmount=250.00",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1", "payment"],
+							"query": [
+								{
+									"key": "paymentAmount",
+									"value": "250.00"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Mark Loan As Urgent",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1/urgent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1", "urgent"]
+						}
+					}
+				},
+				{
+					"name": "Mark Loan As Not Urgent",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1/not-urgent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1", "not-urgent"]
+						}
+					}
+				},
+				{
+					"name": "Delete Loan",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Loan Summary Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/summary",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "summary"]
+						}
+					}
+				},
+				{
+					"name": "Get Overdue Loans Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/overdue",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "overdue"]
+						}
+					}
+				},
+				{
+					"name": "Get Loans Due Soon Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/due-soon?daysAhead=7",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "due-soon"],
+							"query": [
+								{
+									"key": "daysAhead",
+									"value": "7"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Urgent Loans Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/urgent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "urgent"]
+						}
+					}
+				},
+				{
+					"name": "Get Total Amount Lent",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/total-lent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "total-lent"]
+						}
+					}
+				},
+				{
+					"name": "Get Total Amount Borrowed",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/total-borrowed",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "total-borrowed"]
+						}
+					}
+				},
+				{
+					"name": "Get Net Loan Position",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/net-position",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "net-position"]
+						}
+					}
+				},
+				{
+					"name": "Get Loans By Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/date-range?startDate=2024-01-01T00:00:00&endDate=2024-12-31T23:59:59",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "date-range"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01T00:00:00"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31T23:59:59"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Loans By Due Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/due-date-range?startDate=2024-10-01T00:00:00&endDate=2024-12-31T23:59:59",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "due-date-range"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-10-01T00:00:00"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31T23:59:59"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Recurring Expenses",
+			"item": [
+				{
+					"name": "Get All Recurring Expenses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses?page=0&size=20&sort=name,asc",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "sort",
+									"value": "name,asc"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Recurring Expense By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Recurring Expenses By Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/account/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "account", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Recurring Expenses By Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/status/active",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "status", "active"]
+						}
+					}
+				},
+				{
+					"name": "Get Recurring Expenses By Frequency",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/frequency/monthly",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "frequency", "monthly"]
+						}
+					}
+				},
+				{
+					"name": "Get Recurring Expenses Due Today",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/due-today",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "due-today"]
+						}
+					}
+				},
+				{
+					"name": "Get Overdue Recurring Expenses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/overdue",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "overdue"]
+						}
+					}
+				},
+				{
+					"name": "Get Recurring Expenses Due Soon",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/due-soon?daysAhead=7",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "due-soon"],
+							"query": [
+								{
+									"key": "daysAhead",
+									"value": "7"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Recurring Expenses With Auto-Pay",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/auto-pay",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "auto-pay"]
+						}
+					}
+				},
+				{
+					"name": "Search Recurring Expenses By Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/search/name?name=netflix",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "search", "name"],
+							"query": [
+								{
+									"key": "name",
+									"value": "netflix"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Recurring Expenses By Provider",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/search/provider?provider=netflix",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "search", "provider"],
+							"query": [
+								{
+									"key": "provider",
+									"value": "netflix"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Recurring Expense",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Netflix Subscription\",\n  \"amount\": 15.99,\n  \"frequency\": \"MONTHLY\",\n  \"startDate\": \"2024-10-01T00:00:00\",\n  \"nextDueDate\": \"2024-11-01T00:00:00\",\n  \"account\": {\n    \"id\": 1\n  },\n  \"category\": {\n    \"id\": 1\n  },\n  \"provider\": \"Netflix\",\n  \"status\": \"ACTIVE\",\n  \"autoPay\": true,\n  \"description\": \"Monthly streaming subscription\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses"]
+						}
+					}
+				},
+				{
+					"name": "Update Recurring Expense",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Netflix Premium Subscription\",\n  \"amount\": 19.99,\n  \"frequency\": \"MONTHLY\",\n  \"startDate\": \"2024-10-01T00:00:00\",\n  \"nextDueDate\": \"2024-11-01T00:00:00\",\n  \"account\": {\n    \"id\": 1\n  },\n  \"category\": {\n    \"id\": 1\n  },\n  \"provider\": \"Netflix\",\n  \"status\": \"ACTIVE\",\n  \"autoPay\": true,\n  \"description\": \"Updated subscription\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1"]
+						}
+					}
+				},
+				{
+					"name": "Mark Recurring Expense As Paid",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1/mark-paid",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1", "mark-paid"]
+						}
+					}
+				},
+				{
+					"name": "Pause Recurring Expense",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1/pause",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1", "pause"]
+						}
+					}
+				},
+				{
+					"name": "Resume Recurring Expense",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1/resume",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1", "resume"]
+						}
+					}
+				},
+				{
+					"name": "Cancel Recurring Expense",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1/cancel",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1", "cancel"]
+						}
+					}
+				},
+				{
+					"name": "Delete Recurring Expense",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Total Monthly Recurring Expenses By Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/account/1/total-monthly",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "account", "1", "total-monthly"]
+						}
+					}
+				},
+				{
+					"name": "Get Total Recurring Expenses By Account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/account/1/total",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "account", "1", "total"]
+						}
+					}
+				},
+				{
+					"name": "Process All Due Recurring Expenses",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/process-due",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "process-due"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Get Dashboard Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/dashboard",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "dashboard"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Meta",
+			"item": [
+				{
+					"name": "Get Application Metadata",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/meta",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "meta"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Reports",
+			"item": [
+				{
+					"name": "Get Monthly Reports",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/reports/monthly?start=2024-01&end=2024-12",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "reports", "monthly"],
+							"query": [
+								{
+									"key": "start",
+									"value": "2024-01"
+								},
+								{
+									"key": "end",
+									"value": "2024-12"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}
+
