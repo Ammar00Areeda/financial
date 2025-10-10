@@ -1,0 +1,50 @@
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: financial-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 065516010@Ammar
+      MYSQL_DATABASE: financial_db
+      MYSQL_USER: financial_user
+      MYSQL_PASSWORD: financial_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./create_database.sql:/docker-entrypoint-initdb.d/create_database.sql
+    networks:
+      - financial-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p065516010@Ammar"]
+      timeout: 20s
+      retries: 10
+
+  # Spring Boot Application
+  financial-app:
+    build: .
+    container_name: financial-app
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - financial-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/hello"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mysql_data:
+
+networks:
+  financial-network:
+    driver: bridge

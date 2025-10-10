@@ -1,0 +1,1084 @@
+openapi: 3.0.3
+info:
+  title: Financial Management API
+  description: |
+    A comprehensive REST API for financial management system that handles users, accounts, and transactions.
+    
+    ## Features
+    - User management (CRUD operations)
+    - Account management with different account types
+    - Transaction processing and history
+    - Real-time balance updates
+    - Transaction status tracking
+    
+    ## Authentication
+    Currently, this API does not require authentication. In production, implement proper security measures.
+    
+    ## Rate Limiting
+    API calls are limited to 1000 requests per hour per IP address.
+    
+  version: 1.0.0
+  contact:
+    name: Financial API Support
+    email: support@financial.com
+    url: https://financial.com/support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8081/api
+    description: Development server
+  - url: https://api.financial.com/v1
+    description: Production server
+
+tags:
+  - name: Hello World
+    description: Simple greeting endpoints for API testing
+  - name: Users
+    description: User management operations
+  - name: Accounts
+    description: Account management operations
+  - name: Transactions
+    description: Transaction processing and history
+  - name: Health
+    description: System health and monitoring
+
+paths:
+  /hello:
+    get:
+      tags:
+        - Hello World
+      summary: Get Hello World message
+      description: Returns a simple 'Hello World' greeting message
+      operationId: getHelloWorld
+      responses:
+        '200':
+          description: Successfully retrieved greeting message
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Hello World"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /hello/{name}:
+    get:
+      tags:
+        - Hello World
+      summary: Get personalized greeting
+      description: Returns a personalized greeting message with the provided name
+      operationId: getPersonalizedHello
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Name to include in the greeting
+          schema:
+            type: string
+            example: "John"
+      responses:
+        '200':
+          description: Successfully retrieved personalized greeting
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Hello John"
+        '400':
+          description: Bad request - invalid name parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Get all users
+      description: Retrieve a list of all users in the system
+      operationId: getAllUsers
+      parameters:
+        - name: page
+          in: query
+          description: Page number (0-based)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          description: Sort criteria (field,direction)
+          schema:
+            type: string
+            example: "createdAt,desc"
+      responses:
+        '200':
+          description: Successfully retrieved users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pageable:
+                    $ref: '#/components/schemas/Pageable'
+                  totalElements:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  size:
+                    type: integer
+                  number:
+                    type: integer
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      description: Create a new user in the system
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '409':
+          description: Conflict - user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Retrieve a specific user by their ID
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Users
+      summary: Update user
+      description: Update an existing user
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      description: Delete a user from the system
+      operationId: deleteUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        '204':
+          description: User deleted successfully
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/username/{username}:
+    get:
+      tags:
+        - Users
+      summary: Get user by username
+      description: Retrieve a user by their username
+      operationId: getUserByUsername
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Username
+          schema:
+            type: string
+            example: "john_doe"
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts:
+    get:
+      tags:
+        - Accounts
+      summary: Get all accounts
+      description: Retrieve a list of all accounts
+      operationId: getAllAccounts
+      parameters:
+        - name: userId
+          in: query
+          description: Filter by user ID
+          schema:
+            type: integer
+            format: int64
+        - name: accountType
+          in: query
+          description: Filter by account type
+          schema:
+            $ref: '#/components/schemas/AccountType'
+        - name: page
+          in: query
+          description: Page number (0-based)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Successfully retrieved accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Account'
+                  pageable:
+                    $ref: '#/components/schemas/Pageable'
+                  totalElements:
+                    type: integer
+                  totalPages:
+                    type: integer
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Accounts
+      summary: Create a new account
+      description: Create a new account for a user
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/{id}:
+    get:
+      tags:
+        - Accounts
+      summary: Get account by ID
+      description: Retrieve a specific account by its ID
+      operationId: getAccountById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        '200':
+          description: Account found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /transactions:
+    get:
+      tags:
+        - Transactions
+      summary: Get all transactions
+      description: Retrieve a list of all transactions
+      operationId: getAllTransactions
+      parameters:
+        - name: accountId
+          in: query
+          description: Filter by account ID
+          schema:
+            type: integer
+            format: int64
+        - name: transactionType
+          in: query
+          description: Filter by transaction type
+          schema:
+            $ref: '#/components/schemas/TransactionType'
+        - name: status
+          in: query
+          description: Filter by transaction status
+          schema:
+            $ref: '#/components/schemas/TransactionStatus'
+        - name: fromDate
+          in: query
+          description: Filter transactions from this date
+          schema:
+            type: string
+            format: date-time
+        - name: toDate
+          in: query
+          description: Filter transactions to this date
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          description: Page number (0-based)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Successfully retrieved transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  pageable:
+                    $ref: '#/components/schemas/Pageable'
+                  totalElements:
+                    type: integer
+                  totalPages:
+                    type: integer
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Transactions
+      summary: Create a new transaction
+      description: Process a new transaction
+      operationId: createTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+      responses:
+        '201':
+          description: Transaction created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Bad request - validation errors or insufficient funds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /transactions/{id}:
+    get:
+      tags:
+        - Transactions
+      summary: Get transaction by ID
+      description: Retrieve a specific transaction by its ID
+      operationId: getTransactionById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Transaction ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        '200':
+          description: Transaction found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check the health status of the API
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - email
+        - firstName
+        - lastName
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier for the user
+          example: 1
+        username:
+          type: string
+          maxLength: 50
+          description: Unique username
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: User's email address
+          example: "john.doe@email.com"
+        firstName:
+          type: string
+          maxLength: 50
+          description: User's first name
+          example: "John"
+        lastName:
+          type: string
+          maxLength: 50
+          description: User's last name
+          example: "Doe"
+        createdAt:
+          type: string
+          format: date-time
+          description: User creation timestamp
+          example: "2023-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: User last update timestamp
+          example: "2023-01-01T00:00:00Z"
+
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - email
+        - firstName
+        - lastName
+      properties:
+        username:
+          type: string
+          maxLength: 50
+          description: Unique username
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: User's email address
+          example: "john.doe@email.com"
+        firstName:
+          type: string
+          maxLength: 50
+          description: User's first name
+          example: "John"
+        lastName:
+          type: string
+          maxLength: 50
+          description: User's last name
+          example: "Doe"
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 50
+          description: Unique username
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          maxLength: 100
+          description: User's email address
+          example: "john.doe@email.com"
+        firstName:
+          type: string
+          maxLength: 50
+          description: User's first name
+          example: "John"
+        lastName:
+          type: string
+          maxLength: 50
+          description: User's last name
+          example: "Doe"
+
+    Account:
+      type: object
+      required:
+        - id
+        - userId
+        - accountNumber
+        - accountType
+        - balance
+        - currency
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier for the account
+          example: 1
+        userId:
+          type: integer
+          format: int64
+          description: ID of the user who owns this account
+          example: 1
+        accountNumber:
+          type: string
+          maxLength: 20
+          description: Unique account number
+          example: "ACC001"
+        accountType:
+          $ref: '#/components/schemas/AccountType'
+        balance:
+          type: number
+          format: decimal
+          description: Current account balance
+          example: 1500.00
+        currency:
+          type: string
+          maxLength: 3
+          description: Account currency code
+          example: "USD"
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2023-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Account last update timestamp
+          example: "2023-01-01T00:00:00Z"
+
+    CreateAccountRequest:
+      type: object
+      required:
+        - userId
+        - accountNumber
+        - accountType
+        - currency
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: ID of the user who owns this account
+          example: 1
+        accountNumber:
+          type: string
+          maxLength: 20
+          description: Unique account number
+          example: "ACC001"
+        accountType:
+          $ref: '#/components/schemas/AccountType'
+        currency:
+          type: string
+          maxLength: 3
+          description: Account currency code
+          example: "USD"
+
+    AccountType:
+      type: string
+      enum:
+        - CHECKING
+        - SAVINGS
+        - CREDIT
+        - INVESTMENT
+      description: Type of account
+      example: "CHECKING"
+
+    Transaction:
+      type: object
+      required:
+        - id
+        - amount
+        - transactionType
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier for the transaction
+          example: 1
+        fromAccountId:
+          type: integer
+          format: int64
+          nullable: true
+          description: ID of the source account (null for deposits)
+          example: 1
+        toAccountId:
+          type: integer
+          format: int64
+          nullable: true
+          description: ID of the destination account (null for withdrawals)
+          example: 2
+        amount:
+          type: number
+          format: decimal
+          description: Transaction amount
+          example: 200.00
+        transactionType:
+          $ref: '#/components/schemas/TransactionType'
+        description:
+          type: string
+          description: Transaction description
+          example: "Transfer to savings"
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        createdAt:
+          type: string
+          format: date-time
+          description: Transaction creation timestamp
+          example: "2023-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Transaction last update timestamp
+          example: "2023-01-01T00:00:00Z"
+
+    CreateTransactionRequest:
+      type: object
+      required:
+        - amount
+        - transactionType
+      properties:
+        fromAccountId:
+          type: integer
+          format: int64
+          description: ID of the source account (required for withdrawals and transfers)
+          example: 1
+        toAccountId:
+          type: integer
+          format: int64
+          description: ID of the destination account (required for deposits and transfers)
+          example: 2
+        amount:
+          type: number
+          format: decimal
+          minimum: 0.01
+          description: Transaction amount
+          example: 200.00
+        transactionType:
+          $ref: '#/components/schemas/TransactionType'
+        description:
+          type: string
+          description: Transaction description
+          example: "Transfer to savings"
+
+    TransactionType:
+      type: string
+      enum:
+        - DEPOSIT
+        - WITHDRAWAL
+        - TRANSFER
+        - PAYMENT
+      description: Type of transaction
+      example: "TRANSFER"
+
+    TransactionStatus:
+      type: string
+      enum:
+        - PENDING
+        - COMPLETED
+        - FAILED
+        - CANCELLED
+      description: Status of the transaction
+      example: "COMPLETED"
+
+    Pageable:
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+          description: Page number (0-based)
+          example: 0
+        pageSize:
+          type: integer
+          description: Number of items per page
+          example: 20
+        sort:
+          type: object
+          properties:
+            sorted:
+              type: boolean
+              example: true
+            unsorted:
+              type: boolean
+              example: false
+            empty:
+              type: boolean
+              example: false
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum:
+            - UP
+            - DOWN
+          description: Service health status
+          example: "UP"
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+          example: "2023-01-01T00:00:00Z"
+        details:
+          type: object
+          description: Additional health details
+          properties:
+            database:
+              type: string
+              enum:
+                - UP
+                - DOWN
+              example: "UP"
+            diskSpace:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "UP"
+                total:
+                  type: integer
+                  example: 1000000000
+                free:
+                  type: integer
+                  example: 500000000
+                threshold:
+                  type: integer
+                  example: 10000000
+
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2023-01-01T00:00:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: Error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Error message
+          example: "Validation failed"
+        path:
+          type: string
+          description: Request path
+          example: "/api/users"
+
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            validationErrors:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: "email"
+                  message:
+                    type: string
+                    example: "Email format is invalid"
+                  rejectedValue:
+                    type: string
+                    example: "invalid-email"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+
+
+
