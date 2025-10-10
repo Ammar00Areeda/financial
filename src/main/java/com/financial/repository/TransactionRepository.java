@@ -3,6 +3,7 @@ package com.financial.repository;
 import com.financial.entity.Account;
 import com.financial.entity.Category;
 import com.financial.entity.Transaction;
+import com.financial.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,12 +14,109 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository interface for Transaction entity operations.
  */
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+    
+    /**
+     * Find transaction by ID and user.
+     *
+     * @param id the transaction ID
+     * @param user the user
+     * @return Optional containing the transaction if found
+     */
+    Optional<Transaction> findByIdAndUser(Long id, User user);
+    
+    /**
+     * Find all transactions by user with pagination.
+     *
+     * @param user the user
+     * @param pageable pagination information
+     * @return page of user's transactions
+     */
+    Page<Transaction> findByUser(User user, Pageable pageable);
+    
+    /**
+     * Find transactions by user and type.
+     *
+     * @param user the user
+     * @param type the transaction type
+     * @return list of transactions for the user with the specified type
+     */
+    List<Transaction> findByUserAndType(User user, Transaction.TransactionType type);
+    
+    /**
+     * Find transactions by user and date range.
+     *
+     * @param user the user
+     * @param startDate the start date
+     * @param endDate the end date
+     * @return list of transactions for the user within the date range
+     */
+    List<Transaction> findByUserAndTransactionDateBetween(User user, LocalDateTime startDate, LocalDateTime endDate);
+    
+    /**
+     * Find transactions by user, ordered by transaction date descending.
+     *
+     * @param user the user
+     * @param pageable pagination information
+     * @return page of transactions ordered by date descending
+     */
+    @Query("SELECT t FROM Transaction t WHERE t.user = :user ORDER BY t.transactionDate DESC")
+    Page<Transaction> findLastTransactionsByUser(@Param("user") User user, Pageable pageable);
+    
+    /**
+     * Calculate total amount by user and transaction type.
+     *
+     * @param user the user
+     * @param type the transaction type
+     * @return total amount for the user and transaction type
+     */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user = :user AND t.type = :type")
+    BigDecimal calculateTotalAmountByUserAndType(@Param("user") User user, @Param("type") Transaction.TransactionType type);
+    
+    /**
+     * Calculate total amount by user and date range.
+     *
+     * @param user the user
+     * @param startDate the start date
+     * @param endDate the end date
+     * @return total amount for the user within the date range
+     */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user = :user AND t.transactionDate BETWEEN :startDate AND :endDate")
+    BigDecimal calculateTotalAmountByUserAndDateRange(@Param("user") User user, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    
+    /**
+     * Calculate total income amount for a user.
+     *
+     * @param user the user
+     * @return total income amount
+     */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user = :user AND t.type = 'INCOME'")
+    BigDecimal calculateTotalIncomeByUser(@Param("user") User user);
+    
+    /**
+     * Calculate total expense amount for a user.
+     *
+     * @param user the user
+     * @return total expense amount
+     */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.user = :user AND t.type = 'EXPENSE'")
+    BigDecimal calculateTotalExpenseByUser(@Param("user") User user);
+    
+    /**
+     * Find transactions by user and description containing (case-insensitive).
+     *
+     * @param user the user
+     * @param description the description pattern to search for
+     * @return list of transactions matching the pattern
+     */
+    @Query("SELECT t FROM Transaction t WHERE t.user = :user AND LOWER(t.description) LIKE LOWER(CONCAT('%', :description, '%'))")
+    List<Transaction> findByUserAndDescriptionContainingIgnoreCase(@Param("user") User user, @Param("description") String description);
     
     /**
      * Find transactions by account.

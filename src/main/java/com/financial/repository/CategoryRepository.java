@@ -1,6 +1,7 @@
 package com.financial.repository;
 
 import com.financial.entity.Category;
+import com.financial.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,6 +17,46 @@ import java.util.Optional;
  */
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
+    
+    // User-based queries
+    /**
+     * Find category by ID and user (or system categories with null user).
+     *
+     * @param id the category ID
+     * @param user the user
+     * @return Optional containing the category if found
+     */
+    @Query("SELECT c FROM Category c WHERE c.id = :id AND (c.user = :user OR c.user IS NULL)")
+    Optional<Category> findByIdAndUserOrSystem(@Param("id") Long id, @Param("user") User user);
+    
+    /**
+     * Find all categories for user (including system categories).
+     *
+     * @param user the user
+     * @return list of categories
+     */
+    @Query("SELECT c FROM Category c WHERE c.user = :user OR c.user IS NULL")
+    List<Category> findByUserOrSystem(@Param("user") User user);
+    
+    /**
+     * Find categories by user and type (including system categories).
+     *
+     * @param user the user
+     * @param type the category type
+     * @return list of categories
+     */
+    @Query("SELECT c FROM Category c WHERE (c.user = :user OR c.user IS NULL) AND c.type = :type")
+    List<Category> findByUserOrSystemAndType(@Param("user") User user, @Param("type") Category.CategoryType type);
+    
+    /**
+     * Find active categories by user (including system categories).
+     *
+     * @param user the user
+     * @param isActive whether the category is active
+     * @return list of active categories
+     */
+    @Query("SELECT c FROM Category c WHERE (c.user = :user OR c.user IS NULL) AND c.isActive = :isActive")
+    List<Category> findByUserOrSystemAndIsActive(@Param("user") User user, @Param("isActive") Boolean isActive);
     
     /**
      * Find category by name.

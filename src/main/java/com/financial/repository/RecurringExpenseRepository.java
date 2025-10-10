@@ -3,6 +3,7 @@ package com.financial.repository;
 import com.financial.entity.Account;
 import com.financial.entity.Category;
 import com.financial.entity.RecurringExpense;
+import com.financial.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,12 +14,70 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository interface for RecurringExpense entity operations.
  */
 @Repository
 public interface RecurringExpenseRepository extends JpaRepository<RecurringExpense, Long> {
+    
+    // User-based queries
+    /**
+     * Find recurring expense by ID and user.
+     *
+     * @param id the recurring expense ID
+     * @param user the user
+     * @return Optional containing the recurring expense if found
+     */
+    Optional<RecurringExpense> findByIdAndUser(Long id, User user);
+    
+    /**
+     * Find all recurring expenses by user with pagination.
+     *
+     * @param user the user
+     * @param pageable pagination information
+     * @return page of user's recurring expenses
+     */
+    Page<RecurringExpense> findByUser(User user, Pageable pageable);
+    
+    /**
+     * Find recurring expenses by user and status.
+     *
+     * @param user the user
+     * @param status the status
+     * @return list of recurring expenses
+     */
+    List<RecurringExpense> findByUserAndStatus(User user, RecurringExpense.Status status);
+    
+    /**
+     * Find recurring expenses due today for a user.
+     *
+     * @param user the user
+     * @param today the current date
+     * @return list of recurring expenses due today
+     */
+    @Query("SELECT r FROM RecurringExpense r WHERE r.user = :user AND r.nextDueDate = :today AND r.status = 'ACTIVE'")
+    List<RecurringExpense> findDueTodayByUser(@Param("user") User user, @Param("today") LocalDate today);
+    
+    /**
+     * Find overdue recurring expenses for a user.
+     *
+     * @param user the user
+     * @param today the current date
+     * @return list of overdue recurring expenses
+     */
+    @Query("SELECT r FROM RecurringExpense r WHERE r.user = :user AND r.nextDueDate < :today AND r.status = 'ACTIVE'")
+    List<RecurringExpense> findOverdueByUser(@Param("user") User user, @Param("today") LocalDate today);
+    
+    /**
+     * Calculate total monthly recurring expenses for a user.
+     *
+     * @param user the user
+     * @return total monthly recurring expenses
+     */
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RecurringExpense r WHERE r.user = :user AND r.status = 'ACTIVE' AND r.frequency = 'MONTHLY'")
+    BigDecimal calculateTotalMonthlyRecurringExpensesByUser(@Param("user") User user);
     
     /**
      * Find recurring expenses by account.

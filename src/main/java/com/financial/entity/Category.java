@@ -45,6 +45,10 @@ public class Category {
     @Column(name = "is_active")
     private Boolean isActive = true;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

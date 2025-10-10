@@ -2,6 +2,7 @@ package com.financial.repository;
 
 import com.financial.entity.Account;
 import com.financial.entity.Loan;
+import com.financial.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,12 +13,78 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository interface for Loan entity operations.
  */
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
+    
+    // User-based queries
+    /**
+     * Find loan by ID and user.
+     *
+     * @param id the loan ID
+     * @param user the user
+     * @return Optional containing the loan if found
+     */
+    Optional<Loan> findByIdAndUser(Long id, User user);
+    
+    /**
+     * Find all loans by user with pagination.
+     *
+     * @param user the user
+     * @param pageable pagination information
+     * @return page of user's loans
+     */
+    Page<Loan> findByUser(User user, Pageable pageable);
+    
+    /**
+     * Find loans by user and type.
+     *
+     * @param user the user
+     * @param loanType the loan type
+     * @return list of loans
+     */
+    List<Loan> findByUserAndLoanType(User user, Loan.LoanType loanType);
+    
+    /**
+     * Find loans by user and status.
+     *
+     * @param user the user
+     * @param status the loan status
+     * @return list of loans
+     */
+    List<Loan> findByUserAndStatus(User user, Loan.LoanStatus status);
+    
+    /**
+     * Find overdue loans for a user.
+     *
+     * @param user the user
+     * @param currentDate the current date
+     * @return list of overdue loans
+     */
+    @Query("SELECT l FROM Loan l WHERE l.user = :user AND l.dueDate < :currentDate AND l.status = 'ACTIVE'")
+    List<Loan> findOverdueLoansByUser(@Param("user") User user, @Param("currentDate") LocalDateTime currentDate);
+    
+    /**
+     * Calculate total amount lent by user.
+     *
+     * @param user the user
+     * @return total amount lent
+     */
+    @Query("SELECT COALESCE(SUM(l.principalAmount), 0) FROM Loan l WHERE l.user = :user AND l.loanType = 'LENT'")
+    BigDecimal calculateTotalAmountLentByUser(@Param("user") User user);
+    
+    /**
+     * Calculate total amount borrowed by user.
+     *
+     * @param user the user
+     * @return total amount borrowed
+     */
+    @Query("SELECT COALESCE(SUM(l.principalAmount), 0) FROM Loan l WHERE l.user = :user AND l.loanType = 'BORROWED'")
+    BigDecimal calculateTotalAmountBorrowedByUser(@Param("user") User user);
     
     /**
      * Find loans by type (LENT or BORROWED).

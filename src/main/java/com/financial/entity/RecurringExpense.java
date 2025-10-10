@@ -91,6 +91,11 @@ public class RecurringExpense {
     @Column(name = "notes", length = 500)
     private String notes;
     
+    @NotNull(message = "User is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

@@ -98,6 +98,11 @@ public class Loan {
     @Column(name = "next_reminder_date")
     private LocalDateTime nextReminderDate;
     
+    @NotNull(message = "User is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

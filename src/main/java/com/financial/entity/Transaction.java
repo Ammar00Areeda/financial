@@ -81,6 +81,11 @@ public class Transaction {
     @Column(name = "recurring_end_date")
     private LocalDateTime recurringEndDate;
     
+    @NotNull(message = "User is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

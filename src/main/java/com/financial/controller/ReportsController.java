@@ -1,6 +1,7 @@
 package com.financial.controller;
 
 import com.financial.dto.ReportsDto;
+import com.financial.entity.Transaction;
 import com.financial.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -88,9 +89,24 @@ public class ReportsController {
             String monthId = "report-" + currentDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
             String month = currentDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
             
-            // In a real application, you would calculate these values from actual transaction data
-            BigDecimal income = new BigDecimal("5400.00");
-            BigDecimal expenses = new BigDecimal("3680.00");
+            // Calculate month boundaries
+            LocalDateTime monthStart = currentDate.atStartOfDay();
+            LocalDateTime monthEnd = currentDate.plusMonths(1).atStartOfDay().minusSeconds(1);
+            
+            // Get all transactions for the month
+            List<Transaction> monthTransactions = transactionService.getTransactionsByDateRange(monthStart, monthEnd);
+            
+            // Calculate income and expenses
+            BigDecimal income = monthTransactions.stream()
+                    .filter(t -> t.getType() == Transaction.TransactionType.INCOME)
+                    .map(Transaction::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            BigDecimal expenses = monthTransactions.stream()
+                    .filter(t -> t.getType() == Transaction.TransactionType.EXPENSE)
+                    .map(Transaction::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
             BigDecimal savings = income.subtract(expenses);
             
             ReportsDto.MonthlyReportDto report = ReportsDto.MonthlyReportDto.builder()

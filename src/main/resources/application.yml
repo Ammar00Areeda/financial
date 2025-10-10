@@ -28,6 +28,7 @@ flyway:
   baseline-on-migrate: true
   baseline-version: 0
   validate-on-migrate: true
+  clean-disabled: false
 
 springdoc:
   api-docs:
@@ -49,5 +50,10 @@ logging:
     com.financial: INFO
     org.springframework.web: INFO
     org.flywaydb: DEBUG
+    org.springframework.security: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+jwt:
+  secret: mySecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLongForHS256Algorithm
+  expiration: 86400000  # 24 hours in milliseconds

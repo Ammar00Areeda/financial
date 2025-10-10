@@ -73,6 +73,11 @@ public class Account {
     @Column(name = "is_include_in_balance")
     private Boolean includeInBalance = true;
     
+    @NotNull(message = "User is required")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

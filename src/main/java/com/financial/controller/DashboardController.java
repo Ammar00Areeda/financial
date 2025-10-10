@@ -118,23 +118,31 @@ public class DashboardController {
     }
     
     private List<DashboardDto.SpendingBreakdownDto> getMonthlySpendingBreakdown() {
-        // This is a simplified implementation
-        // In a real application, you would query the database for actual spending by category
-        return List.of(
-                DashboardDto.SpendingBreakdownDto.builder()
-                        .label("Groceries")
-                        .categoryId("cat-2")
-                        .amount(new BigDecimal("210.45"))
-                        .build(),
-                DashboardDto.SpendingBreakdownDto.builder()
-                        .label("Utilities")
-                        .categoryId("cat-3")
-                        .amount(new BigDecimal("120.50"))
-                        .build(),
-                DashboardDto.SpendingBreakdownDto.builder()
-                        .label("Loans Given")
-                        .amount(new BigDecimal("1500.00"))
-                        .build()
-        );
+        // Get current month start and end dates
+        LocalDateTime startOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime endOfMonth = startOfMonth.plusMonths(1).minusSeconds(1);
+        
+        // Get all expense transactions for current month
+        List<Transaction> monthlyExpenses = transactionService.getTransactionsByDateRange(startOfMonth, endOfMonth)
+                .stream()
+                .filter(t -> t.getType() == Transaction.TransactionType.EXPENSE)
+                .toList();
+        
+        // Group by category and sum amounts
+        var categorySpending = monthlyExpenses.stream()
+                .filter(t -> t.getCategory() != null)
+                .collect(Collectors.groupingBy(
+                        t -> t.getCategory(),
+                        Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)
+                ));
+        
+        // Convert to breakdown DTOs
+        return categorySpending.entrySet().stream()
+                .map(entry -> DashboardDto.SpendingBreakdownDto.builder()
+                        .label(entry.getKey().getName())
+                        .categoryId(entry.getKey().getId().toString())
+                        .amount(entry.getValue())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

@@ -4,7 +4,9 @@ import com.financial.entity.Account;
 import com.financial.entity.Category;
 import com.financial.entity.RecurringExpense;
 import com.financial.entity.Transaction;
+import com.financial.entity.User;
 import com.financial.repository.RecurringExpenseRepository;
+import com.financial.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,24 +31,26 @@ public class RecurringExpenseService {
     private final TransactionService transactionService;
     
     /**
-     * Get all recurring expenses with pagination.
+     * Get all recurring expenses for the authenticated user with pagination.
      *
      * @param pageable pagination information
      * @return page of recurring expenses
      */
     @Transactional(readOnly = true)
     public Page<RecurringExpense> getAllRecurringExpenses(Pageable pageable) {
-        return recurringExpenseRepository.findAll(pageable);
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        return recurringExpenseRepository.findByUser(currentUser, pageable);
     }
     
     /**
-     * Get all recurring expenses.
+     * Get all recurring expenses for the authenticated user.
      *
      * @return list of all recurring expenses
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> getAllRecurringExpenses() {
-        return recurringExpenseRepository.findAll();
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        return recurringExpenseRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
     }
     
     /**
@@ -73,25 +77,30 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Get recurring expenses by status.
+     * Get recurring expenses by status for the authenticated user.
      *
      * @param status the status
      * @return list of recurring expenses with the specified status
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> getRecurringExpensesByStatus(RecurringExpense.Status status) {
-        return recurringExpenseRepository.findByStatus(status);
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        return recurringExpenseRepository.findByUserAndStatus(currentUser, status);
     }
     
     /**
-     * Get recurring expenses by frequency.
+     * Get recurring expenses by frequency for the authenticated user.
      *
      * @param frequency the frequency
      * @return list of recurring expenses with the specified frequency
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> getRecurringExpensesByFrequency(RecurringExpense.Frequency frequency) {
-        return recurringExpenseRepository.findByFrequency(frequency);
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        List<RecurringExpense> allExpenses = recurringExpenseRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        return allExpenses.stream()
+                .filter(e -> e.getFrequency() == frequency)
+                .toList();
     }
     
     /**
@@ -107,68 +116,91 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Search recurring expenses by name.
+     * Search recurring expenses by name for the authenticated user.
      *
      * @param name the name pattern to search for
      * @return list of recurring expenses matching the pattern
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> searchRecurringExpensesByName(String name) {
-        return recurringExpenseRepository.findByNameContainingIgnoreCase(name);
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        List<RecurringExpense> allExpenses = recurringExpenseRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        return allExpenses.stream()
+                .filter(e -> e.getName() != null && 
+                            e.getName().toLowerCase().contains(name.toLowerCase()))
+                .toList();
     }
     
     /**
-     * Search recurring expenses by provider.
+     * Search recurring expenses by provider for the authenticated user.
      *
      * @param provider the provider pattern to search for
      * @return list of recurring expenses matching the pattern
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> searchRecurringExpensesByProvider(String provider) {
-        return recurringExpenseRepository.findByProviderContainingIgnoreCase(provider);
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        List<RecurringExpense> allExpenses = recurringExpenseRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        return allExpenses.stream()
+                .filter(e -> e.getProvider() != null && 
+                            e.getProvider().toLowerCase().contains(provider.toLowerCase()))
+                .toList();
     }
     
     /**
-     * Get recurring expenses due today.
+     * Get recurring expenses due today for the authenticated user.
      *
      * @return list of recurring expenses due today
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> getRecurringExpensesDueToday() {
-        return recurringExpenseRepository.findDueToday(LocalDate.now());
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        return recurringExpenseRepository.findDueTodayByUser(currentUser, LocalDate.now());
     }
     
     /**
-     * Get overdue recurring expenses.
+     * Get overdue recurring expenses for the authenticated user.
      *
      * @return list of overdue recurring expenses
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> getOverdueRecurringExpenses() {
-        return recurringExpenseRepository.findOverdue(LocalDate.now());
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        return recurringExpenseRepository.findOverdueByUser(currentUser, LocalDate.now());
     }
     
     /**
-     * Get recurring expenses due soon.
+     * Get recurring expenses due soon for the authenticated user.
      *
      * @param daysAhead the number of days ahead to check
      * @return list of recurring expenses due soon
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> getRecurringExpensesDueSoon(int daysAhead) {
+        User currentUser = SecurityUtils.getAuthenticatedUser();
         LocalDate today = LocalDate.now();
         LocalDate futureDate = today.plusDays(daysAhead);
-        return recurringExpenseRepository.findDueSoon(today, futureDate);
+        List<RecurringExpense> allExpenses = recurringExpenseRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        return allExpenses.stream()
+                .filter(e -> e.getNextDueDate() != null && 
+                            !e.getNextDueDate().isBefore(today) && 
+                            !e.getNextDueDate().isAfter(futureDate) &&
+                            e.getStatus() == RecurringExpense.Status.ACTIVE)
+                .toList();
     }
     
     /**
-     * Get recurring expenses with auto-pay enabled.
+     * Get recurring expenses with auto-pay enabled for the authenticated user.
      *
      * @return list of recurring expenses with auto-pay enabled
      */
     @Transactional(readOnly = true)
     public List<RecurringExpense> getRecurringExpensesWithAutoPay() {
-        return recurringExpenseRepository.findByIsAutoPay(true);
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        List<RecurringExpense> allExpenses = recurringExpenseRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        return allExpenses.stream()
+                .filter(e -> e.getIsAutoPay() != null && e.getIsAutoPay())
+                .toList();
     }
     
     /**
@@ -197,23 +229,29 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Get recurring expense by ID.
+     * Get recurring expense by ID for the authenticated user.
      *
      * @param id the recurring expense ID
      * @return Optional containing the recurring expense if found
      */
     @Transactional(readOnly = true)
     public Optional<RecurringExpense> getRecurringExpenseById(Long id) {
-        return recurringExpenseRepository.findById(id);
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        return recurringExpenseRepository.findByIdAndUser(id, currentUser);
     }
     
     /**
-     * Create a new recurring expense.
+     * Create a new recurring expense for the authenticated user.
      *
      * @param recurringExpense the recurring expense to create
      * @return the created recurring expense
      */
     public RecurringExpense createRecurringExpense(RecurringExpense recurringExpense) {
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        
+        // Associate recurring expense with current user
+        recurringExpense.setUser(currentUser);
+        
         // Calculate next due date if not provided
         if (recurringExpense.getNextDueDate() == null) {
             recurringExpense.setNextDueDate(recurringExpense.calculateNextDueDate(
@@ -226,38 +264,51 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Update an existing recurring expense.
+     * Update an existing recurring expense for the authenticated user.
      *
      * @param recurringExpense the recurring expense to update
      * @return the updated recurring expense
+     * @throws IllegalArgumentException if recurring expense not found or doesn't belong to user
      */
     public RecurringExpense updateRecurringExpense(RecurringExpense recurringExpense) {
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        
+        // Verify recurring expense belongs to current user
+        RecurringExpense existingExpense = recurringExpenseRepository.findByIdAndUser(recurringExpense.getId(), currentUser)
+                .orElseThrow(() -> new IllegalArgumentException("Recurring expense with ID " + recurringExpense.getId() + " not found"));
+        
+        // Ensure user association is not changed
+        recurringExpense.setUser(currentUser);
+        
         return recurringExpenseRepository.save(recurringExpense);
     }
     
     /**
-     * Delete recurring expense by ID.
+     * Delete recurring expense by ID for the authenticated user.
      *
      * @param id the recurring expense ID
-     * @throws IllegalArgumentException if recurring expense not found
+     * @throws IllegalArgumentException if recurring expense not found or doesn't belong to user
      */
     public void deleteRecurringExpense(Long id) {
-        if (!recurringExpenseRepository.existsById(id)) {
-            throw new IllegalArgumentException("Recurring expense with ID " + id + " not found");
-        }
+        User currentUser = SecurityUtils.getAuthenticatedUser();
         
-        recurringExpenseRepository.deleteById(id);
+        RecurringExpense expense = recurringExpenseRepository.findByIdAndUser(id, currentUser)
+                .orElseThrow(() -> new IllegalArgumentException("Recurring expense with ID " + id + " not found"));
+        
+        recurringExpenseRepository.delete(expense);
     }
     
     /**
-     * Mark recurring expense as paid and create transaction.
+     * Mark recurring expense as paid and create transaction for the authenticated user.
      *
      * @param id the recurring expense ID
      * @return the updated recurring expense
-     * @throws IllegalArgumentException if recurring expense not found
+     * @throws IllegalArgumentException if recurring expense not found or doesn't belong to user
      */
     public RecurringExpense markAsPaid(Long id) {
-        RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        
+        RecurringExpense recurringExpense = recurringExpenseRepository.findByIdAndUser(id, currentUser)
                 .orElseThrow(() -> new IllegalArgumentException("Recurring expense with ID " + id + " not found"));
         
         // Mark as paid and calculate next due date
@@ -275,6 +326,7 @@ public class RecurringExpenseService {
                 .referenceNumber(recurringExpense.getReferenceNumber())
                 .isRecurring(true)
                 .recurringFrequency(Transaction.RecurringFrequency.valueOf(recurringExpense.getFrequency().name()))
+                .user(currentUser)
                 .build();
         
         // Create transaction and update account balance
@@ -285,14 +337,16 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Pause a recurring expense.
+     * Pause a recurring expense for the authenticated user.
      *
      * @param id the recurring expense ID
      * @return the updated recurring expense
-     * @throws IllegalArgumentException if recurring expense not found
+     * @throws IllegalArgumentException if recurring expense not found or doesn't belong to user
      */
     public RecurringExpense pauseRecurringExpense(Long id) {
-        RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        
+        RecurringExpense recurringExpense = recurringExpenseRepository.findByIdAndUser(id, currentUser)
                 .orElseThrow(() -> new IllegalArgumentException("Recurring expense with ID " + id + " not found"));
         
         recurringExpense.setStatus(RecurringExpense.Status.PAUSED);
@@ -300,14 +354,16 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Resume a paused recurring expense.
+     * Resume a paused recurring expense for the authenticated user.
      *
      * @param id the recurring expense ID
      * @return the updated recurring expense
-     * @throws IllegalArgumentException if recurring expense not found
+     * @throws IllegalArgumentException if recurring expense not found or doesn't belong to user
      */
     public RecurringExpense resumeRecurringExpense(Long id) {
-        RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        
+        RecurringExpense recurringExpense = recurringExpenseRepository.findByIdAndUser(id, currentUser)
                 .orElseThrow(() -> new IllegalArgumentException("Recurring expense with ID " + id + " not found"));
         
         recurringExpense.setStatus(RecurringExpense.Status.ACTIVE);
@@ -315,14 +371,16 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Cancel a recurring expense.
+     * Cancel a recurring expense for the authenticated user.
      *
      * @param id the recurring expense ID
      * @return the updated recurring expense
-     * @throws IllegalArgumentException if recurring expense not found
+     * @throws IllegalArgumentException if recurring expense not found or doesn't belong to user
      */
     public RecurringExpense cancelRecurringExpense(Long id) {
-        RecurringExpense recurringExpense = recurringExpenseRepository.findById(id)
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        
+        RecurringExpense recurringExpense = recurringExpenseRepository.findByIdAndUser(id, currentUser)
                 .orElseThrow(() -> new IllegalArgumentException("Recurring expense with ID " + id + " not found"));
         
         recurringExpense.setStatus(RecurringExpense.Status.CANCELLED);
@@ -330,13 +388,14 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Process all due recurring expenses (for scheduled job).
+     * Process all due recurring expenses for the authenticated user (for scheduled job).
      *
      * @return number of processed expenses
      */
     @Transactional
     public int processAllDueRecurringExpenses() {
-        List<RecurringExpense> dueExpenses = recurringExpenseRepository.findDueToday(LocalDate.now());
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        List<RecurringExpense> dueExpenses = recurringExpenseRepository.findDueTodayByUser(currentUser, LocalDate.now());
         
         for (RecurringExpense expense : dueExpenses) {
             if (expense.getIsAutoPay() != null && expense.getIsAutoPay()) {
