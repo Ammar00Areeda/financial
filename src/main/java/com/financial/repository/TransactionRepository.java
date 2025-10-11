@@ -6,6 +6,7 @@ import com.financial.entity.Transaction;
 import com.financial.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,55 +19,68 @@ import java.util.Optional;
 
 /**
  * Repository interface for Transaction entity operations.
+ * Optimized to avoid N+1 query problems using @EntityGraph and fetch joins.
  */
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     
     /**
-     * Find transaction by ID and user.
+     * Find transaction by ID and user with account and category eagerly loaded.
      *
      * @param id the transaction ID
      * @param user the user
      * @return Optional containing the transaction if found
      */
+    @EntityGraph(attributePaths = {"account", "category", "transferToAccount"})
     Optional<Transaction> findByIdAndUser(Long id, User user);
     
     /**
      * Find all transactions by user with pagination.
+     * Uses EntityGraph to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param pageable pagination information
      * @return page of user's transactions
      */
+    @EntityGraph(attributePaths = {"account", "category", "transferToAccount"})
     Page<Transaction> findByUser(User user, Pageable pageable);
     
     /**
      * Find transactions by user and type.
+     * Uses EntityGraph to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param type the transaction type
      * @return list of transactions for the user with the specified type
      */
+    @EntityGraph(attributePaths = {"account", "category", "transferToAccount"})
     List<Transaction> findByUserAndType(User user, Transaction.TransactionType type);
     
     /**
      * Find transactions by user and date range.
+     * Uses EntityGraph to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param startDate the start date
      * @param endDate the end date
      * @return list of transactions for the user within the date range
      */
+    @EntityGraph(attributePaths = {"account", "category", "transferToAccount"})
     List<Transaction> findByUserAndTransactionDateBetween(User user, LocalDateTime startDate, LocalDateTime endDate);
     
     /**
      * Find transactions by user, ordered by transaction date descending.
+     * Uses fetch join to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param pageable pagination information
      * @return page of transactions ordered by date descending
      */
-    @Query("SELECT t FROM Transaction t WHERE t.user = :user ORDER BY t.transactionDate DESC")
+    @Query("SELECT DISTINCT t FROM Transaction t " +
+           "LEFT JOIN FETCH t.account " +
+           "LEFT JOIN FETCH t.category " +
+           "LEFT JOIN FETCH t.transferToAccount " +
+           "WHERE t.user = :user ORDER BY t.transactionDate DESC")
     Page<Transaction> findLastTransactionsByUser(@Param("user") User user, Pageable pageable);
     
     /**
@@ -110,29 +124,38 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     
     /**
      * Find transactions by user and description containing (case-insensitive).
+     * Uses fetch join to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param description the description pattern to search for
      * @return list of transactions matching the pattern
      */
-    @Query("SELECT t FROM Transaction t WHERE t.user = :user AND LOWER(t.description) LIKE LOWER(CONCAT('%', :description, '%'))")
+    @Query("SELECT DISTINCT t FROM Transaction t " +
+           "LEFT JOIN FETCH t.account " +
+           "LEFT JOIN FETCH t.category " +
+           "LEFT JOIN FETCH t.transferToAccount " +
+           "WHERE t.user = :user AND LOWER(t.description) LIKE LOWER(CONCAT('%', :description, '%'))")
     List<Transaction> findByUserAndDescriptionContainingIgnoreCase(@Param("user") User user, @Param("description") String description);
     
     /**
      * Find transactions by account.
+     * Uses EntityGraph to eagerly load category to avoid N+1 queries.
      *
      * @param account the account
      * @return list of transactions for the account
      */
+    @EntityGraph(attributePaths = {"category", "transferToAccount"})
     List<Transaction> findByAccount(Account account);
     
     /**
      * Find transactions by account with pagination.
+     * Uses EntityGraph to eagerly load category to avoid N+1 queries.
      *
      * @param account the account
      * @param pageable pagination information
      * @return page of transactions for the account
      */
+    @EntityGraph(attributePaths = {"category", "transferToAccount"})
     Page<Transaction> findByAccount(Account account, Pageable pageable);
     
     /**
@@ -245,12 +268,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     
     /**
      * Find the last N transactions for a specific account ordered by transaction date descending.
+     * Uses fetch join to eagerly load category to avoid N+1 queries.
      *
      * @param account the account
      * @param pageable pagination information
      * @return page of transactions for the account ordered by date descending
      */
-    @Query("SELECT t FROM Transaction t WHERE t.account = :account ORDER BY t.transactionDate DESC")
+    @Query("SELECT DISTINCT t FROM Transaction t " +
+           "LEFT JOIN FETCH t.category " +
+           "LEFT JOIN FETCH t.transferToAccount " +
+           "WHERE t.account = :account ORDER BY t.transactionDate DESC")
     Page<Transaction> findLastTransactionsByAccount(@Param("account") Account account, Pageable pageable);
     
     /**

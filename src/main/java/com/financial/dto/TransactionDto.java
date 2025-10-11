@@ -1,5 +1,6 @@
 package com.financial.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.financial.entity.Transaction;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionDto {
     
     private Long id;

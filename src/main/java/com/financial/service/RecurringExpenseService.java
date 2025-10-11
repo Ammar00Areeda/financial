@@ -20,6 +20,18 @@ import java.util.Optional;
 
 /**
  * Service class for recurring expense-related business logic.
+ * 
+ * <p>This service manages recurring expenses such as subscriptions, rent, utilities, and
+ * other periodic payments. It handles automatic payment processing, due date tracking,
+ * reminders, and integration with transactions and account balances.</p>
+ * 
+ * <p><b>Security:</b> All methods require authentication. Operations are automatically
+ * scoped to the authenticated user retrieved via {@link SecurityUtils#getAuthenticatedUser()}.
+ * Users can only access and modify their own recurring expenses.</p>
+ * 
+ * @see RecurringExpense
+ * @see RecurringExpenseRepository
+ * @see SecurityUtils
  */
 @Service
 @RequiredArgsConstructor
@@ -31,10 +43,24 @@ public class RecurringExpenseService {
     private final TransactionService transactionService;
     
     /**
-     * Get all recurring expenses for the authenticated user with pagination.
+     * Retrieves all recurring expenses for the authenticated user with pagination support.
+     * 
+     * <p><b>Security:</b> Requires authentication. Only returns recurring expenses belonging
+     * to the authenticated user.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * Pageable pageable = PageRequest.of(0, 20, Sort.by("nextDueDate"));
+     * Page<RecurringExpense> expenses = recurringExpenseService.getAllRecurringExpenses(pageable);
+     * expenses.forEach(expense -> 
+     *     System.out.println(expense.getName() + " - Due: " + expense.getNextDueDate())
+     * );
+     * }</pre>
      *
-     * @param pageable pagination information
-     * @return page of recurring expenses
+     * @param pageable pagination information including page number, size, and sort order
+     * @return page of recurring expenses belonging to the authenticated user
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     @Transactional(readOnly = true)
     public Page<RecurringExpense> getAllRecurringExpenses(Pageable pageable) {
@@ -241,10 +267,38 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Create a new recurring expense for the authenticated user.
+     * Creates a new recurring expense for the authenticated user.
+     * 
+     * <p>The recurring expense is automatically associated with the authenticated user.
+     * If the next due date is not provided, it is calculated based on the start date
+     * and frequency.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. The recurring expense is associated
+     * with the authenticated user and cannot be transferred to another user.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * RecurringExpense expense = RecurringExpense.builder()
+     *     .name("Netflix Subscription")
+     *     .amount(new BigDecimal("15.99"))
+     *     .frequency(Frequency.MONTHLY)
+     *     .startDate(LocalDate.now())
+     *     .provider("Netflix")
+     *     .status(Status.ACTIVE)
+     *     .isAutoPay(true)
+     *     .account(myAccount)
+     *     .category(subscriptionCategory)
+     *     .build();
+     * 
+     * RecurringExpense created = recurringExpenseService.createRecurringExpense(expense);
+     * System.out.println("Recurring expense created with ID: " + created.getId());
+     * System.out.println("Next due date: " + created.getNextDueDate());
+     * }</pre>
      *
-     * @param recurringExpense the recurring expense to create
-     * @return the created recurring expense
+     * @param recurringExpense the recurring expense to create (must not be null)
+     * @return the persisted recurring expense with generated ID and calculated due date
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     public RecurringExpense createRecurringExpense(RecurringExpense recurringExpense) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
@@ -299,11 +353,40 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Mark recurring expense as paid and create transaction for the authenticated user.
+     * Marks a recurring expense as paid and creates a corresponding transaction.
+     * 
+     * <p>This method performs the following actions:
+     * <ul>
+     *   <li>Updates the last paid date to today</li>
+     *   <li>Calculates and sets the next due date based on frequency</li>
+     *   <li>Creates a transaction record for the payment</li>
+     *   <li>Deducts the expense amount from the associated account balance</li>
+     * </ul>
+     * </p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only recurring expenses belonging to
+     * the authenticated user can be marked as paid.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Mark a recurring expense as paid
+     * RecurringExpense expense = recurringExpenseService.markAsPaid(123L);
+     * 
+     * System.out.println("Last paid: " + expense.getLastPaidDate());
+     * System.out.println("Next due: " + expense.getNextDueDate());
+     * 
+     * // The transaction is automatically created
+     * List<Transaction> transactions = transactionService.getAllTransactions();
+     * Transaction latest = transactions.get(0);
+     * System.out.println("Transaction created: " + latest.getDescription());
+     * }</pre>
      *
-     * @param id the recurring expense ID
-     * @return the updated recurring expense
-     * @throws IllegalArgumentException if recurring expense not found or doesn't belong to user
+     * @param id the ID of the recurring expense to mark as paid
+     * @return the updated recurring expense with new due date and payment information
+     * @throws IllegalArgumentException if the recurring expense doesn't exist or doesn't
+     *         belong to the authenticated user
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     public RecurringExpense markAsPaid(Long id) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
@@ -388,9 +471,32 @@ public class RecurringExpenseService {
     }
     
     /**
-     * Process all due recurring expenses for the authenticated user (for scheduled job).
+     * Processes all due recurring expenses for the authenticated user with auto-pay enabled.
+     * 
+     * <p>This method is designed to be called by a scheduled job. It finds all recurring
+     * expenses that are due today and have auto-pay enabled, then automatically marks them
+     * as paid, creating transactions and updating account balances.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only processes recurring expenses belonging
+     * to the authenticated user.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Typically called by a scheduled job
+     * @Scheduled(cron = "0 0 2 * * *") // Run daily at 2 AM
+     * public void processRecurringExpensesJob() {
+     *     int processed = recurringExpenseService.processAllDueRecurringExpenses();
+     *     logger.info("Processed {} recurring expenses", processed);
+     * }
+     * 
+     * // Can also be called manually
+     * int count = recurringExpenseService.processAllDueRecurringExpenses();
+     * System.out.println("Processed " + count + " auto-pay expenses");
+     * }</pre>
      *
-     * @return number of processed expenses
+     * @return the number of recurring expenses that were processed and paid
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     @Transactional
     public int processAllDueRecurringExpenses() {

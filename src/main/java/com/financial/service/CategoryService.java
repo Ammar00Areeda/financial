@@ -15,6 +15,19 @@ import java.util.Optional;
 
 /**
  * Service class for category-related business logic.
+ * 
+ * <p>This service manages both system-wide categories and user-specific custom categories.
+ * System categories (user_id = NULL) are available to all users, while custom categories
+ * are only visible to the user who created them.</p>
+ * 
+ * <p><b>Security:</b> All methods require authentication. Read operations return both
+ * system categories and user's custom categories. Write operations (create, update, delete)
+ * can only be performed on the authenticated user's custom categories. System categories
+ * are read-only.</p>
+ * 
+ * @see Category
+ * @see CategoryRepository
+ * @see SecurityUtils
  */
 @Service
 @RequiredArgsConstructor
@@ -24,10 +37,25 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     
     /**
-     * Get all categories for the authenticated user (including system categories) with pagination.
+     * Retrieves all categories available to the authenticated user with pagination.
+     * 
+     * <p>Returns both system categories (shared by all users) and custom categories
+     * created by the authenticated user.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Returns system categories and
+     * categories belonging to the authenticated user only.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * Pageable pageable = PageRequest.of(0, 20);
+     * Page<Category> categories = categoryService.getAllCategories(pageable);
+     * // Note: Current implementation returns empty page - see method body
+     * }</pre>
      *
-     * @param pageable pagination information
-     * @return page of categories
+     * @param pageable pagination information including page number, size, and sort order
+     * @return page of categories available to the authenticated user
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     @Transactional(readOnly = true)
     public Page<Category> getAllCategories(Pageable pageable) {
@@ -155,12 +183,38 @@ public class CategoryService {
     }
     
     /**
-     * Create a new custom category for the authenticated user.
-     * Note: Only users can create custom categories. System categories have user_id = NULL.
+     * Creates a new custom category for the authenticated user.
+     * 
+     * <p>The category is automatically associated with the authenticated user, making it
+     * a custom user category (not a system category). Category names must be globally unique
+     * across all users and system categories. Default value for isActive is set to true if
+     * not provided.</p>
+     * 
+     * <p><b>Note:</b> Only users can create custom categories. System categories (user_id = NULL)
+     * can only be created directly in the database.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. The category is associated with the
+     * authenticated user and cannot be transferred to another user.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * Category category = Category.builder()
+     *     .name("Personal Projects")
+     *     .type(CategoryType.EXPENSE)
+     *     .icon("🎯")
+     *     .color("#FF5733")
+     *     .isActive(true)
+     *     .build();
+     * 
+     * Category created = categoryService.createCategory(category);
+     * System.out.println("Category created with ID: " + created.getId());
+     * }</pre>
      *
-     * @param category the category to create
-     * @return the created category
-     * @throws IllegalArgumentException if category with same name already exists
+     * @param category the category to create (must not be null, name is required)
+     * @return the persisted category with generated ID and default values applied
+     * @throws IllegalArgumentException if a category with the same name already exists
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     public Category createCategory(Category category) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
@@ -180,12 +234,38 @@ public class CategoryService {
     }
     
     /**
-     * Update an existing category for the authenticated user.
-     * Note: Users can only update their own custom categories, not system categories.
+     * Updates an existing custom category for the authenticated user.
+     * 
+     * <p>Verifies ownership and prevents modification of system categories. Users can only
+     * update their own custom categories. Category names must remain globally unique.</p>
+     * 
+     * <p><b>Note:</b> Users can only update their own custom categories, not system categories.
+     * System categories are read-only for all users.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only custom categories belonging to the
+     * authenticated user can be updated. System categories cannot be modified. The user
+     * association is immutable.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * Category category = categoryService.getCategoryById(123L)
+     *     .orElseThrow(() -> new NotFoundException("Category not found"));
+     * 
+     * // This will fail if category is a system category
+     * category.setName("Updated Project Name");
+     * category.setColor("#00FF00");
+     * 
+     * Category updated = categoryService.updateCategory(category);
+     * System.out.println("Category updated: " + updated.getName());
+     * }</pre>
      *
-     * @param category the category to update
-     * @return the updated category
-     * @throws IllegalArgumentException if category with same name already exists, category not found, or attempting to modify system category
+     * @param category the category to update with modified fields
+     * @return the updated and persisted category
+     * @throws IllegalArgumentException if the category doesn't exist, is a system category,
+     *         doesn't belong to the authenticated user, or if another category with the same
+     *         name already exists
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     public Category updateCategory(Category category) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
@@ -215,11 +295,34 @@ public class CategoryService {
     }
     
     /**
-     * Delete category by ID for the authenticated user.
-     * Note: Users can only delete their own custom categories, not system categories.
+     * Deletes a custom category by ID for the authenticated user.
+     * 
+     * <p>Verifies ownership and prevents deletion of system categories. This operation is
+     * permanent and cannot be undone. Consider the impact on related transactions before
+     * deleting.</p>
+     * 
+     * <p><b>Note:</b> Users can only delete their own custom categories, not system categories.
+     * System categories cannot be deleted.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only custom categories belonging to the
+     * authenticated user can be deleted. System categories are protected from deletion.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * try {
+     *     categoryService.deleteCategory(123L);
+     *     System.out.println("Category deleted successfully");
+     * } catch (IllegalArgumentException e) {
+     *     // Will throw if category is a system category or not owned by user
+     *     System.err.println("Cannot delete: " + e.getMessage());
+     * }
+     * }</pre>
      *
-     * @param id the category ID
-     * @throws IllegalArgumentException if category not found or attempting to delete system category
+     * @param id the ID of the category to delete
+     * @throws IllegalArgumentException if the category doesn't exist, is a system category,
+     *         or doesn't belong to the authenticated user
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     public void deleteCategory(Long id) {
         User currentUser = SecurityUtils.getAuthenticatedUser();

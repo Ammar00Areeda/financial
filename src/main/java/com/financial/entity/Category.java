@@ -2,6 +2,7 @@ package com.financial.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -31,7 +32,7 @@ public class Category {
     @Column(name = "description", length = 500)
     private String description;
     
-    @NotBlank(message = "Category type is required")
+    @NotNull(message = "Category type is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
     private CategoryType type;
@@ -43,6 +44,7 @@ public class Category {
     private String icon; // Icon name for UI display
     
     @Column(name = "is_active")
+    @Builder.Default
     private Boolean isActive = true;
     
     @ManyToOne(fetch = FetchType.LAZY)

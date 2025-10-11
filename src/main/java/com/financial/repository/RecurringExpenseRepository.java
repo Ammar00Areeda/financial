@@ -6,6 +6,7 @@ import com.financial.entity.RecurringExpense;
 import com.financial.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +19,7 @@ import java.util.Optional;
 
 /**
  * Repository interface for RecurringExpense entity operations.
+ * Optimized to avoid N+1 query problems using @EntityGraph and fetch joins.
  */
 @Repository
 public interface RecurringExpenseRepository extends JpaRepository<RecurringExpense, Long> {
@@ -25,49 +27,63 @@ public interface RecurringExpenseRepository extends JpaRepository<RecurringExpen
     // User-based queries
     /**
      * Find recurring expense by ID and user.
+     * Uses EntityGraph to eagerly load account and category to avoid N+1 queries.
      *
      * @param id the recurring expense ID
      * @param user the user
      * @return Optional containing the recurring expense if found
      */
+    @EntityGraph(attributePaths = {"account", "category"})
     Optional<RecurringExpense> findByIdAndUser(Long id, User user);
     
     /**
      * Find all recurring expenses by user with pagination.
+     * Uses EntityGraph to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param pageable pagination information
      * @return page of user's recurring expenses
      */
+    @EntityGraph(attributePaths = {"account", "category"})
     Page<RecurringExpense> findByUser(User user, Pageable pageable);
     
     /**
      * Find recurring expenses by user and status.
+     * Uses EntityGraph to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param status the status
      * @return list of recurring expenses
      */
+    @EntityGraph(attributePaths = {"account", "category"})
     List<RecurringExpense> findByUserAndStatus(User user, RecurringExpense.Status status);
     
     /**
      * Find recurring expenses due today for a user.
+     * Uses fetch join to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param today the current date
      * @return list of recurring expenses due today
      */
-    @Query("SELECT r FROM RecurringExpense r WHERE r.user = :user AND r.nextDueDate = :today AND r.status = 'ACTIVE'")
+    @Query("SELECT DISTINCT r FROM RecurringExpense r " +
+           "LEFT JOIN FETCH r.account " +
+           "LEFT JOIN FETCH r.category " +
+           "WHERE r.user = :user AND r.nextDueDate = :today AND r.status = 'ACTIVE'")
     List<RecurringExpense> findDueTodayByUser(@Param("user") User user, @Param("today") LocalDate today);
     
     /**
      * Find overdue recurring expenses for a user.
+     * Uses fetch join to eagerly load account and category to avoid N+1 queries.
      *
      * @param user the user
      * @param today the current date
      * @return list of overdue recurring expenses
      */
-    @Query("SELECT r FROM RecurringExpense r WHERE r.user = :user AND r.nextDueDate < :today AND r.status = 'ACTIVE'")
+    @Query("SELECT DISTINCT r FROM RecurringExpense r " +
+           "LEFT JOIN FETCH r.account " +
+           "LEFT JOIN FETCH r.category " +
+           "WHERE r.user = :user AND r.nextDueDate < :today AND r.status = 'ACTIVE'")
     List<RecurringExpense> findOverdueByUser(@Param("user") User user, @Param("today") LocalDate today);
     
     /**
@@ -81,19 +97,23 @@ public interface RecurringExpenseRepository extends JpaRepository<RecurringExpen
     
     /**
      * Find recurring expenses by account.
+     * Uses EntityGraph to eagerly load category to avoid N+1 queries.
      *
      * @param account the account
      * @return list of recurring expenses for the account
      */
+    @EntityGraph(attributePaths = {"category"})
     List<RecurringExpense> findByAccount(Account account);
     
     /**
      * Find recurring expenses by account with pagination.
+     * Uses EntityGraph to eagerly load category to avoid N+1 queries.
      *
      * @param account the account
      * @param pageable pagination information
      * @return page of recurring expenses for the account
      */
+    @EntityGraph(attributePaths = {"category"})
     Page<RecurringExpense> findByAccount(Account account, Pageable pageable);
     
     /**

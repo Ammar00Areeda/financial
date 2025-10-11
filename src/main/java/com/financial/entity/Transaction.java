@@ -72,6 +72,7 @@ public class Transaction {
     private String referenceNumber;
     
     @Column(name = "is_recurring")
+    @Builder.Default
     private Boolean isRecurring = false;
     
     @Enumerated(EnumType.STRING)

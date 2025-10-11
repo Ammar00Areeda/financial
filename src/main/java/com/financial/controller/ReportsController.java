@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -30,6 +31,7 @@ import java.util.List;
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
 @Tag(name = "Reports", description = "Financial reports and analytics operations")
+@SecurityRequirement(name = "Bearer Authentication")
 public class ReportsController {
 
     private final TransactionService transactionService;

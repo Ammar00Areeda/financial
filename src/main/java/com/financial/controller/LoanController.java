@@ -1,6 +1,7 @@
 package com.financial.controller;
 
 import com.financial.dto.LoanDto;
+import com.financial.dto.LoanListDTO;
 import com.financial.entity.Account;
 import com.financial.entity.Loan;
 import com.financial.mapper.LoanMapper;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/loans")
 @RequiredArgsConstructor
 @Tag(name = "Loans", description = "Loan management and reporting operations")
+@SecurityRequirement(name = "Bearer Authentication")
 public class LoanController {
 
     private final LoanService loanService;
@@ -52,7 +55,7 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    public ResponseEntity<Page<LoanDto>> getAllLoans(
+    public ResponseEntity<Page<LoanListDTO>> getAllLoans(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort criteria (field,direction)") @RequestParam(defaultValue = "loanDate,desc") String sort) {
@@ -64,7 +67,7 @@ public class LoanController {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortField));
         Page<Loan> loans = loanService.getAllLoans(pageable);
-        Page<LoanDto> loanDtos = loans.map(loanMapper::toDto);
+        Page<LoanListDTO> loanDtos = loans.map(LoanListDTO::fromEntity);
         
         return ResponseEntity.ok(loanDtos);
     }
@@ -79,14 +82,14 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<LoanDto>> getLoansByType(
+    public ResponseEntity<List<LoanListDTO>> getLoansByType(
             @Parameter(description = "Loan type (LENT or BORROWED)", required = true) @PathVariable String type) {
         
         try {
             Loan.LoanType loanType = Loan.LoanType.valueOf(type.toUpperCase());
             List<Loan> loans = loanService.getLoansByType(loanType);
-            List<LoanDto> loanDtos = loans.stream()
-                    .map(loanMapper::toDto)
+            List<LoanListDTO> loanDtos = loans.stream()
+                    .map(LoanListDTO::fromEntity)
                     .collect(Collectors.toList());
             return ResponseEntity.ok(loanDtos);
         } catch (IllegalArgumentException e) {
@@ -104,14 +107,14 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<LoanDto>> getLoansByStatus(
+    public ResponseEntity<List<LoanListDTO>> getLoansByStatus(
             @Parameter(description = "Loan status", required = true) @PathVariable String status) {
         
         try {
             Loan.LoanStatus loanStatus = Loan.LoanStatus.valueOf(status.toUpperCase());
             List<Loan> loans = loanService.getLoansByStatus(loanStatus);
-            List<LoanDto> loanDtos = loans.stream()
-                    .map(loanMapper::toDto)
+            List<LoanListDTO> loanDtos = loans.stream()
+                    .map(LoanListDTO::fromEntity)
                     .collect(Collectors.toList());
             return ResponseEntity.ok(loanDtos);
         } catch (IllegalArgumentException e) {
@@ -129,7 +132,7 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/account/{accountId}")
-    public ResponseEntity<List<LoanDto>> getLoansByAccount(
+    public ResponseEntity<List<LoanListDTO>> getLoansByAccount(
             @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
         
         Optional<Account> account = accountService.getAccountById(accountId);
@@ -138,8 +141,8 @@ public class LoanController {
         }
         
         List<Loan> loans = loanService.getLoansByAccount(account.get());
-        List<LoanDto> loanDtos = loans.stream()
-                .map(loanMapper::toDto)
+        List<LoanListDTO> loanDtos = loans.stream()
+                .map(LoanListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(loanDtos);
     }
@@ -153,12 +156,12 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/search")
-    public ResponseEntity<List<LoanDto>> searchLoansByPersonName(
+    public ResponseEntity<List<LoanListDTO>> searchLoansByPersonName(
             @Parameter(description = "Person name pattern to search for") @RequestParam String personName) {
         
         List<Loan> loans = loanService.searchLoansByPersonName(personName);
-        List<LoanDto> loanDtos = loans.stream()
-                .map(loanMapper::toDto)
+        List<LoanListDTO> loanDtos = loans.stream()
+                .map(LoanListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(loanDtos);
     }
@@ -358,9 +361,12 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/reports/overdue")
-    public ResponseEntity<List<Loan>> getOverdueLoansReport() {
+    public ResponseEntity<List<LoanListDTO>> getOverdueLoansReport() {
         List<Loan> overdueLoans = loanService.getOverdueLoansReport();
-        return ResponseEntity.ok(overdueLoans);
+        List<LoanListDTO> loanDtos = overdueLoans.stream()
+                .map(LoanListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(loanDtos);
     }
 
     @Operation(
@@ -372,11 +378,14 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/reports/due-soon")
-    public ResponseEntity<List<Loan>> getLoansDueSoonReport(
+    public ResponseEntity<List<LoanListDTO>> getLoansDueSoonReport(
             @Parameter(description = "Number of days ahead to check") @RequestParam(defaultValue = "7") int daysAhead) {
         
         List<Loan> loansDueSoon = loanService.getLoansDueSoonReport(daysAhead);
-        return ResponseEntity.ok(loansDueSoon);
+        List<LoanListDTO> loanDtos = loansDueSoon.stream()
+                .map(LoanListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(loanDtos);
     }
 
     @Operation(
@@ -388,9 +397,12 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/reports/urgent")
-    public ResponseEntity<List<Loan>> getUrgentLoansReport() {
+    public ResponseEntity<List<LoanListDTO>> getUrgentLoansReport() {
         List<Loan> urgentLoans = loanService.getUrgentLoans();
-        return ResponseEntity.ok(urgentLoans);
+        List<LoanListDTO> loanDtos = urgentLoans.stream()
+                .map(LoanListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(loanDtos);
     }
 
     @Operation(
@@ -444,12 +456,15 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/reports/date-range")
-    public ResponseEntity<List<Loan>> getLoansByDateRange(
+    public ResponseEntity<List<LoanListDTO>> getLoansByDateRange(
             @Parameter(description = "Start date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @Parameter(description = "End date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
         List<Loan> loans = loanService.getLoansByDateRange(startDate, endDate);
-        return ResponseEntity.ok(loans);
+        List<LoanListDTO> loanDtos = loans.stream()
+                .map(LoanListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(loanDtos);
     }
 
     @Operation(
@@ -461,11 +476,14 @@ public class LoanController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/reports/due-date-range")
-    public ResponseEntity<List<Loan>> getLoansByDueDateRange(
+    public ResponseEntity<List<LoanListDTO>> getLoansByDueDateRange(
             @Parameter(description = "Start date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @Parameter(description = "End date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
         List<Loan> loans = loanService.getLoansByDueDateRange(startDate, endDate);
-        return ResponseEntity.ok(loans);
+        List<LoanListDTO> loanDtos = loans.stream()
+                .map(LoanListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(loanDtos);
     }
 }

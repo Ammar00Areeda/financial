@@ -5,14 +5,16 @@ import com.financial.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
  * Data initializer to ensure default users have correct passwords.
- * Runs on application startup.
+ * Runs on application startup (excluded from test profile).
  */
 @Component
+@Profile("!test")
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
 

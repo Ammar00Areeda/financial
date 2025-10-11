@@ -1,6 +1,7 @@
 package com.financial.controller;
 
 import com.financial.dto.TransactionDto;
+import com.financial.dto.TransactionListDTO;
 import com.financial.entity.Account;
 import com.financial.entity.Category;
 import com.financial.entity.Transaction;
@@ -12,9 +13,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,10 +36,12 @@ import java.util.stream.Collectors;
 /**
  * REST controller for Transaction management operations.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/transactions")
 @RequiredArgsConstructor
 @Tag(name = "Transactions", description = "Transaction management operations")
+@SecurityRequirement(name = "Bearer Authentication")
 public class TransactionController {
 
     private final TransactionService transactionService;
@@ -53,10 +58,10 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/last-5")
-    public ResponseEntity<List<TransactionDto>> getLast5Transactions() {
+    public ResponseEntity<List<TransactionListDTO>> getLast5Transactions() {
         List<Transaction> transactions = transactionService.getLast5Transactions();
-        List<TransactionDto> transactionDtos = transactions.stream()
-                .map(transactionMapper::toDto)
+        List<TransactionListDTO> transactionDtos = transactions.stream()
+                .map(TransactionListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDtos);
     }
@@ -70,11 +75,11 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/last")
-    public ResponseEntity<List<TransactionDto>> getLastTransactions(
+    public ResponseEntity<List<TransactionListDTO>> getLastTransactions(
             @Parameter(description = "Number of transactions to retrieve") @RequestParam(defaultValue = "10") int limit) {
         List<Transaction> transactions = transactionService.getLastTransactions(limit);
-        List<TransactionDto> transactionDtos = transactions.stream()
-                .map(transactionMapper::toDto)
+        List<TransactionListDTO> transactionDtos = transactions.stream()
+                .map(TransactionListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDtos);
     }
@@ -88,7 +93,7 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    public ResponseEntity<Page<TransactionDto>> getAllTransactions(
+    public ResponseEntity<Page<TransactionListDTO>> getAllTransactions(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort criteria (field,direction)") @RequestParam(defaultValue = "transactionDate,desc") String sort) {
@@ -100,7 +105,7 @@ public class TransactionController {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortField));
         Page<Transaction> transactions = transactionService.getAllTransactions(pageable);
-        Page<TransactionDto> transactionDtos = transactions.map(transactionMapper::toDto);
+        Page<TransactionListDTO> transactionDtos = transactions.map(TransactionListDTO::fromEntity);
         
         return ResponseEntity.ok(transactionDtos);
     }
@@ -115,7 +120,7 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/account/{accountId}")
-    public ResponseEntity<List<TransactionDto>> getTransactionsByAccount(
+    public ResponseEntity<List<TransactionListDTO>> getTransactionsByAccount(
             @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
         
         Optional<Account> account = accountService.getAccountById(accountId);
@@ -124,8 +129,8 @@ public class TransactionController {
         }
         
         List<Transaction> transactions = transactionService.getTransactionsByAccount(account.get());
-        List<TransactionDto> transactionDtos = transactions.stream()
-                .map(transactionMapper::toDto)
+        List<TransactionListDTO> transactionDtos = transactions.stream()
+                .map(TransactionListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDtos);
     }
@@ -140,7 +145,7 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/account/{accountId}/paginated")
-    public ResponseEntity<Page<TransactionDto>> getTransactionsByAccountPaginated(
+    public ResponseEntity<Page<TransactionListDTO>> getTransactionsByAccountPaginated(
             @Parameter(description = "Account ID", required = true) @PathVariable Long accountId,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
@@ -158,7 +163,7 @@ public class TransactionController {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortField));
         Page<Transaction> transactions = transactionService.getTransactionsByAccount(account.get(), pageable);
-        Page<TransactionDto> transactionDtos = transactions.map(transactionMapper::toDto);
+        Page<TransactionListDTO> transactionDtos = transactions.map(TransactionListDTO::fromEntity);
         
         return ResponseEntity.ok(transactionDtos);
     }
@@ -173,7 +178,7 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/account/{accountId}/last")
-    public ResponseEntity<List<TransactionDto>> getLastTransactionsByAccount(
+    public ResponseEntity<List<TransactionListDTO>> getLastTransactionsByAccount(
             @Parameter(description = "Account ID", required = true) @PathVariable Long accountId,
             @Parameter(description = "Number of transactions to retrieve") @RequestParam(defaultValue = "10") int limit) {
         
@@ -183,8 +188,8 @@ public class TransactionController {
         }
         
         List<Transaction> transactions = transactionService.getLastTransactionsByAccount(account.get(), limit);
-        List<TransactionDto> transactionDtos = transactions.stream()
-                .map(transactionMapper::toDto)
+        List<TransactionListDTO> transactionDtos = transactions.stream()
+                .map(TransactionListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDtos);
     }
@@ -199,14 +204,14 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<TransactionDto>> getTransactionsByType(
+    public ResponseEntity<List<TransactionListDTO>> getTransactionsByType(
             @Parameter(description = "Transaction type", required = true) @PathVariable String type) {
         
         try {
             Transaction.TransactionType transactionType = Transaction.TransactionType.valueOf(type.toUpperCase());
             List<Transaction> transactions = transactionService.getTransactionsByType(transactionType);
-            List<TransactionDto> transactionDtos = transactions.stream()
-                    .map(transactionMapper::toDto)
+            List<TransactionListDTO> transactionDtos = transactions.stream()
+                    .map(TransactionListDTO::fromEntity)
                     .collect(Collectors.toList());
             return ResponseEntity.ok(transactionDtos);
         } catch (IllegalArgumentException e) {
@@ -224,7 +229,7 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<TransactionDto>> getTransactionsByCategory(
+    public ResponseEntity<List<TransactionListDTO>> getTransactionsByCategory(
             @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId) {
         
         Optional<Category> category = categoryService.getCategoryById(categoryId);
@@ -233,8 +238,8 @@ public class TransactionController {
         }
         
         List<Transaction> transactions = transactionService.getTransactionsByCategory(category.get());
-        List<TransactionDto> transactionDtos = transactions.stream()
-                .map(transactionMapper::toDto)
+        List<TransactionListDTO> transactionDtos = transactions.stream()
+                .map(TransactionListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDtos);
     }
@@ -248,13 +253,13 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/date-range")
-    public ResponseEntity<List<TransactionDto>> getTransactionsByDateRange(
+    public ResponseEntity<List<TransactionListDTO>> getTransactionsByDateRange(
             @Parameter(description = "Start date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @Parameter(description = "End date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
         List<Transaction> transactions = transactionService.getTransactionsByDateRange(startDate, endDate);
-        List<TransactionDto> transactionDtos = transactions.stream()
-                .map(transactionMapper::toDto)
+        List<TransactionListDTO> transactionDtos = transactions.stream()
+                .map(TransactionListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDtos);
     }
@@ -268,13 +273,13 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/amount-range")
-    public ResponseEntity<List<TransactionDto>> getTransactionsByAmountRange(
+    public ResponseEntity<List<TransactionListDTO>> getTransactionsByAmountRange(
             @Parameter(description = "Minimum amount") @RequestParam BigDecimal minAmount,
             @Parameter(description = "Maximum amount") @RequestParam BigDecimal maxAmount) {
         
         List<Transaction> transactions = transactionService.getTransactionsByAmountRange(minAmount, maxAmount);
-        List<TransactionDto> transactionDtos = transactions.stream()
-                .map(transactionMapper::toDto)
+        List<TransactionListDTO> transactionDtos = transactions.stream()
+                .map(TransactionListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDtos);
     }
@@ -288,12 +293,12 @@ public class TransactionController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/search")
-    public ResponseEntity<List<TransactionDto>> searchTransactionsByDescription(
+    public ResponseEntity<List<TransactionListDTO>> searchTransactionsByDescription(
             @Parameter(description = "Description pattern to search for") @RequestParam String description) {
         
         List<Transaction> transactions = transactionService.searchTransactionsByDescription(description);
-        List<TransactionDto> transactionDtos = transactions.stream()
-                .map(transactionMapper::toDto)
+        List<TransactionListDTO> transactionDtos = transactions.stream()
+                .map(TransactionListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(transactionDtos);
     }
@@ -329,38 +334,50 @@ public class TransactionController {
     })
     @PostMapping
     public ResponseEntity<TransactionDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto) {
-        Transaction transaction = transactionMapper.toEntity(transactionDto);
-        
-        // Validate account exists
-        if (transactionDto.getAccountId() != null) {
-            Optional<Account> account = accountService.getAccountById(transactionDto.getAccountId());
-            if (account.isEmpty()) {
+        try {
+            Transaction transaction = transactionMapper.toEntity(transactionDto);
+            
+            // Validate account exists
+            if (transactionDto.getAccountId() != null) {
+                Optional<Account> account = accountService.getAccountById(transactionDto.getAccountId());
+                if (account.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                transaction.setAccount(account.get());
+            }
+            
+            // Validate category exists if provided
+            if (transactionDto.getCategoryId() != null) {
+                Optional<Category> category = categoryService.getCategoryById(transactionDto.getCategoryId());
+                if (category.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                transaction.setCategory(category.get());
+            }
+            
+            // Validate transfer account exists if provided
+            if (transactionDto.getTransferToAccountId() != null) {
+                Optional<Account> transferAccount = accountService.getAccountById(transactionDto.getTransferToAccountId());
+                if (transferAccount.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                transaction.setTransferToAccount(transferAccount.get());
+            }
+            
+            Transaction createdTransaction = transactionService.createTransaction(transaction);
+            TransactionDto createdTransactionDto = transactionMapper.toDto(createdTransaction);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdTransactionDto);
+        } catch (IllegalArgumentException e) {
+            // Check if it's a not found error
+            if (e.getMessage() != null && e.getMessage().contains("not found")) {
                 return ResponseEntity.notFound().build();
             }
-            transaction.setAccount(account.get());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            // Log and return internal server error for unexpected exceptions
+            log.error("Error creating transaction: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        
-        // Validate category exists if provided
-        if (transactionDto.getCategoryId() != null) {
-            Optional<Category> category = categoryService.getCategoryById(transactionDto.getCategoryId());
-            if (category.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            transaction.setCategory(category.get());
-        }
-        
-        // Validate transfer account exists if provided
-        if (transactionDto.getTransferToAccountId() != null) {
-            Optional<Account> transferAccount = accountService.getAccountById(transactionDto.getTransferToAccountId());
-            if (transferAccount.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            transaction.setTransferToAccount(transferAccount.get());
-        }
-        
-        Transaction createdTransaction = transactionService.createTransaction(transaction);
-        TransactionDto createdTransactionDto = transactionMapper.toDto(createdTransaction);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdTransactionDto);
     }
 
     @Operation(
@@ -378,43 +395,63 @@ public class TransactionController {
             @Parameter(description = "Transaction ID", required = true) @PathVariable Long id,
             @Valid @RequestBody TransactionDto transactionDto) {
         
-        if (!transactionService.getTransactionById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        transactionDto.setId(id);
-        Transaction transaction = transactionMapper.toEntity(transactionDto);
-        
-        // Validate account exists
-        if (transactionDto.getAccountId() != null) {
-            Optional<Account> account = accountService.getAccountById(transactionDto.getAccountId());
-            if (account.isEmpty()) {
+        try {
+            // Fetch existing transaction
+            Optional<Transaction> existingTransactionOpt = transactionService.getTransactionById(id);
+            if (existingTransactionOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            transaction.setAccount(account.get());
-        }
-        
-        // Validate category exists if provided
-        if (transactionDto.getCategoryId() != null) {
-            Optional<Category> category = categoryService.getCategoryById(transactionDto.getCategoryId());
-            if (category.isEmpty()) {
+            
+            Transaction existingTransaction = existingTransactionOpt.get();
+            
+            // Update fields from DTO
+            transactionMapper.updateEntityFromDto(existingTransaction, transactionDto);
+            
+            // Validate and set account if changed
+            if (transactionDto.getAccountId() != null) {
+                Optional<Account> account = accountService.getAccountById(transactionDto.getAccountId());
+                if (account.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                existingTransaction.setAccount(account.get());
+            }
+            
+            // Validate and set category if provided
+            if (transactionDto.getCategoryId() != null) {
+                Optional<Category> category = categoryService.getCategoryById(transactionDto.getCategoryId());
+                if (category.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                existingTransaction.setCategory(category.get());
+            } else {
+                existingTransaction.setCategory(null);
+            }
+            
+            // Validate and set transfer account if provided
+            if (transactionDto.getTransferToAccountId() != null) {
+                Optional<Account> transferAccount = accountService.getAccountById(transactionDto.getTransferToAccountId());
+                if (transferAccount.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                existingTransaction.setTransferToAccount(transferAccount.get());
+            } else {
+                existingTransaction.setTransferToAccount(null);
+            }
+            
+            Transaction updatedTransaction = transactionService.updateTransaction(existingTransaction);
+            TransactionDto updatedTransactionDto = transactionMapper.toDto(updatedTransaction);
+            return ResponseEntity.ok(updatedTransactionDto);
+        } catch (IllegalArgumentException e) {
+            // Check if it's a not found error
+            if (e.getMessage() != null && e.getMessage().contains("not found")) {
                 return ResponseEntity.notFound().build();
             }
-            transaction.setCategory(category.get());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            // Log and return internal server error for unexpected exceptions
+            log.error("Error updating transaction: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        
-        // Validate transfer account exists if provided
-        if (transactionDto.getTransferToAccountId() != null) {
-            Optional<Account> transferAccount = accountService.getAccountById(transactionDto.getTransferToAccountId());
-            if (transferAccount.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            transaction.setTransferToAccount(transferAccount.get());
-        }
-        
-        Transaction updatedTransaction = transactionService.updateTransaction(transaction);
-        TransactionDto updatedTransactionDto = transactionMapper.toDto(updatedTransaction);
-        return ResponseEntity.ok(updatedTransactionDto);
     }
 
     @Operation(

@@ -27,7 +27,7 @@ public class AccountMapper {
                 .status(account.getStatus())
                 .color(account.getColor())
                 .icon(account.getIcon())
-                .isIncludeInBalance(account.getIncludeInBalance())
+                .includeInBalance(account.getIncludeInBalance())
                 .createdAt(account.getCreatedAt())
                 .updatedAt(account.getUpdatedAt())
                 .build();
@@ -50,7 +50,7 @@ public class AccountMapper {
                 .status(accountDto.getStatus())
                 .color(accountDto.getColor())
                 .icon(accountDto.getIcon())
-                .includeInBalance(accountDto.getIsIncludeInBalance())
+                .includeInBalance(accountDto.getIncludeInBalance())
                 .createdAt(accountDto.getCreatedAt())
                 .updatedAt(accountDto.getUpdatedAt())
                 .build();
@@ -71,7 +71,7 @@ public class AccountMapper {
         entity.setStatus(dto.getStatus());
         entity.setColor(dto.getColor());
         entity.setIcon(dto.getIcon());
-        entity.setIncludeInBalance(dto.getIsIncludeInBalance());
+        entity.setIncludeInBalance(dto.getIncludeInBalance());
     }
 }
 

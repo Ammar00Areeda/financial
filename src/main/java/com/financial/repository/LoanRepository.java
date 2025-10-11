@@ -5,6 +5,7 @@ import com.financial.entity.Loan;
 import com.financial.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +18,7 @@ import java.util.Optional;
 
 /**
  * Repository interface for Loan entity operations.
+ * Optimized to avoid N+1 query problems using @EntityGraph and fetch joins.
  */
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
@@ -24,48 +26,59 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     // User-based queries
     /**
      * Find loan by ID and user.
+     * Uses EntityGraph to eagerly load account to avoid N+1 queries.
      *
      * @param id the loan ID
      * @param user the user
      * @return Optional containing the loan if found
      */
+    @EntityGraph(attributePaths = {"account"})
     Optional<Loan> findByIdAndUser(Long id, User user);
     
     /**
      * Find all loans by user with pagination.
+     * Uses EntityGraph to eagerly load account to avoid N+1 queries.
      *
      * @param user the user
      * @param pageable pagination information
      * @return page of user's loans
      */
+    @EntityGraph(attributePaths = {"account"})
     Page<Loan> findByUser(User user, Pageable pageable);
     
     /**
      * Find loans by user and type.
+     * Uses EntityGraph to eagerly load account to avoid N+1 queries.
      *
      * @param user the user
      * @param loanType the loan type
      * @return list of loans
      */
+    @EntityGraph(attributePaths = {"account"})
     List<Loan> findByUserAndLoanType(User user, Loan.LoanType loanType);
     
     /**
      * Find loans by user and status.
+     * Uses EntityGraph to eagerly load account to avoid N+1 queries.
      *
      * @param user the user
      * @param status the loan status
      * @return list of loans
      */
+    @EntityGraph(attributePaths = {"account"})
     List<Loan> findByUserAndStatus(User user, Loan.LoanStatus status);
     
     /**
      * Find overdue loans for a user.
+     * Uses fetch join to eagerly load account to avoid N+1 queries.
      *
      * @param user the user
      * @param currentDate the current date
      * @return list of overdue loans
      */
-    @Query("SELECT l FROM Loan l WHERE l.user = :user AND l.dueDate < :currentDate AND l.status = 'ACTIVE'")
+    @Query("SELECT DISTINCT l FROM Loan l " +
+           "LEFT JOIN FETCH l.account " +
+           "WHERE l.user = :user AND l.dueDate < :currentDate AND l.status = 'ACTIVE'")
     List<Loan> findOverdueLoansByUser(@Param("user") User user, @Param("currentDate") LocalDateTime currentDate);
     
     /**

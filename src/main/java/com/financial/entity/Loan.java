@@ -58,6 +58,7 @@ public class Loan {
     private BigDecimal totalAmount; // Principal + Interest
     
     @Column(name = "paid_amount", precision = 15, scale = 2)
+    @Builder.Default
     private BigDecimal paidAmount = BigDecimal.ZERO;
     
     @Column(name = "remaining_amount", precision = 15, scale = 2)
@@ -75,6 +76,7 @@ public class Loan {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
+    @Builder.Default
     private LoanStatus status = LoanStatus.ACTIVE;
     
     @Size(max = 500, message = "Description must not exceed 500 characters")
@@ -90,9 +92,11 @@ public class Loan {
     private Account account; // Account used for the loan transaction
     
     @Column(name = "is_urgent")
+    @Builder.Default
     private Boolean isUrgent = false;
     
     @Column(name = "reminder_enabled")
+    @Builder.Default
     private Boolean reminderEnabled = true;
     
     @Column(name = "next_reminder_date")

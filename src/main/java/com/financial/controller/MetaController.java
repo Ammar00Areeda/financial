@@ -8,6 +8,7 @@ import com.financial.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 @RequestMapping("/api/meta")
 @RequiredArgsConstructor
 @Tag(name = "Meta", description = "Application metadata and statistics operations")
+@SecurityRequirement(name = "Bearer Authentication")
 public class MetaController {
 
     private final AccountService accountService;

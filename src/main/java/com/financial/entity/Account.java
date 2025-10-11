@@ -43,13 +43,13 @@ public class Account {
     private AccountType type;
     
     @NotNull(message = "Balance is required")
-    @DecimalMin(value = "0.0", message = "Balance must be non-negative")
     @Column(name = "balance", nullable = false, precision = 15, scale = 2)
     private BigDecimal balance;
     
     @NotBlank(message = "Currency is required")
     @Size(max = 3, message = "Currency code must be 3 characters")
     @Column(name = "currency", nullable = false, length = 3)
+    @Builder.Default
     private String currency = "JD";
     
     @Size(max = 50, message = "Account number must not exceed 50 characters")
@@ -62,6 +62,7 @@ public class Account {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
+    @Builder.Default
     private AccountStatus status = AccountStatus.ACTIVE;
     
     @Column(name = "color", length = 7)
@@ -71,6 +72,7 @@ public class Account {
     private String icon; // Icon name for UI display
     
     @Column(name = "is_include_in_balance")
+    @Builder.Default
     private Boolean includeInBalance = true;
     
     @NotNull(message = "User is required")

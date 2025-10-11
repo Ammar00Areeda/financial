@@ -10,6 +10,7 @@ import com.financial.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
 @Tag(name = "Dashboard", description = "Dashboard data and overview operations")
+@SecurityRequirement(name = "Bearer Authentication")
 public class DashboardController {
 
     private final AccountService accountService;

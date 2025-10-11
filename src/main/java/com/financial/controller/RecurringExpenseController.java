@@ -1,6 +1,7 @@
 package com.financial.controller;
 
 import com.financial.dto.RecurringExpenseDto;
+import com.financial.dto.RecurringExpenseListDTO;
 import com.financial.entity.Account;
 import com.financial.entity.Category;
 import com.financial.entity.RecurringExpense;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/recurring-expenses")
 @RequiredArgsConstructor
 @Tag(name = "Recurring Expenses", description = "Recurring expense management operations")
+@SecurityRequirement(name = "Bearer Authentication")
 public class RecurringExpenseController {
 
     private final RecurringExpenseService recurringExpenseService;
@@ -51,7 +54,7 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    public ResponseEntity<Page<RecurringExpenseDto>> getAllRecurringExpenses(
+    public ResponseEntity<Page<RecurringExpenseListDTO>> getAllRecurringExpenses(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort criteria (field,direction)") @RequestParam(defaultValue = "name,asc") String sort) {
@@ -63,7 +66,7 @@ public class RecurringExpenseController {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortField));
         Page<RecurringExpense> recurringExpenses = recurringExpenseService.getAllRecurringExpenses(pageable);
-        Page<RecurringExpenseDto> recurringExpenseDtos = recurringExpenses.map(recurringExpenseMapper::toDto);
+        Page<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.map(RecurringExpenseListDTO::fromEntity);
         
         return ResponseEntity.ok(recurringExpenseDtos);
     }
@@ -78,7 +81,7 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/account/{accountId}")
-    public ResponseEntity<List<RecurringExpenseDto>> getRecurringExpensesByAccount(
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByAccount(
             @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
         
         Optional<Account> account = accountService.getAccountById(accountId);
@@ -87,8 +90,8 @@ public class RecurringExpenseController {
         }
         
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesByAccount(account.get());
-        List<RecurringExpenseDto> recurringExpenseDtos = recurringExpenses.stream()
-                .map(recurringExpenseMapper::toDto)
+        List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                .map(RecurringExpenseListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(recurringExpenseDtos);
     }
@@ -103,13 +106,16 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<RecurringExpense>> getRecurringExpensesByStatus(
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByStatus(
             @Parameter(description = "Status", required = true) @PathVariable String status) {
         
         try {
             RecurringExpense.Status expenseStatus = RecurringExpense.Status.valueOf(status.toUpperCase());
             List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesByStatus(expenseStatus);
-            return ResponseEntity.ok(recurringExpenses);
+            List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                    .map(RecurringExpenseListDTO::fromEntity)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(recurringExpenseDtos);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -125,13 +131,16 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/frequency/{frequency}")
-    public ResponseEntity<List<RecurringExpense>> getRecurringExpensesByFrequency(
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByFrequency(
             @Parameter(description = "Frequency", required = true) @PathVariable String frequency) {
         
         try {
             RecurringExpense.Frequency expenseFrequency = RecurringExpense.Frequency.valueOf(frequency.toUpperCase());
             List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesByFrequency(expenseFrequency);
-            return ResponseEntity.ok(recurringExpenses);
+            List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                    .map(RecurringExpenseListDTO::fromEntity)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(recurringExpenseDtos);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -146,9 +155,12 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/due-today")
-    public ResponseEntity<List<RecurringExpense>> getRecurringExpensesDueToday() {
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesDueToday() {
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesDueToday();
-        return ResponseEntity.ok(recurringExpenses);
+        List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                .map(RecurringExpenseListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(recurringExpenseDtos);
     }
 
     @Operation(
@@ -160,9 +172,12 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/overdue")
-    public ResponseEntity<List<RecurringExpense>> getOverdueRecurringExpenses() {
+    public ResponseEntity<List<RecurringExpenseListDTO>> getOverdueRecurringExpenses() {
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getOverdueRecurringExpenses();
-        return ResponseEntity.ok(recurringExpenses);
+        List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                .map(RecurringExpenseListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(recurringExpenseDtos);
     }
 
     @Operation(
@@ -174,11 +189,14 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/due-soon")
-    public ResponseEntity<List<RecurringExpense>> getRecurringExpensesDueSoon(
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesDueSoon(
             @Parameter(description = "Number of days ahead to check") @RequestParam(defaultValue = "7") int daysAhead) {
         
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesDueSoon(daysAhead);
-        return ResponseEntity.ok(recurringExpenses);
+        List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                .map(RecurringExpenseListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(recurringExpenseDtos);
     }
 
     @Operation(
@@ -190,9 +208,12 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/auto-pay")
-    public ResponseEntity<List<RecurringExpense>> getRecurringExpensesWithAutoPay() {
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesWithAutoPay() {
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesWithAutoPay();
-        return ResponseEntity.ok(recurringExpenses);
+        List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                .map(RecurringExpenseListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(recurringExpenseDtos);
     }
 
     @Operation(
@@ -204,11 +225,14 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/search/name")
-    public ResponseEntity<List<RecurringExpense>> searchRecurringExpensesByName(
+    public ResponseEntity<List<RecurringExpenseListDTO>> searchRecurringExpensesByName(
             @Parameter(description = "Name pattern to search for") @RequestParam String name) {
         
         List<RecurringExpense> recurringExpenses = recurringExpenseService.searchRecurringExpensesByName(name);
-        return ResponseEntity.ok(recurringExpenses);
+        List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                .map(RecurringExpenseListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(recurringExpenseDtos);
     }
 
     @Operation(
@@ -220,11 +244,14 @@ public class RecurringExpenseController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/search/provider")
-    public ResponseEntity<List<RecurringExpense>> searchRecurringExpensesByProvider(
+    public ResponseEntity<List<RecurringExpenseListDTO>> searchRecurringExpensesByProvider(
             @Parameter(description = "Provider pattern to search for") @RequestParam String provider) {
         
         List<RecurringExpense> recurringExpenses = recurringExpenseService.searchRecurringExpensesByProvider(provider);
-        return ResponseEntity.ok(recurringExpenses);
+        List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
+                .map(RecurringExpenseListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(recurringExpenseDtos);
     }
 
     @Operation(

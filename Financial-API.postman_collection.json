@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "financial-api-collection",
-		"name": "Financial Application API (with Auth)",
-		"description": "Comprehensive collection of all Financial Application APIs including Authentication, User Management, Accounts, Categories, Transactions, Loans, Recurring Expenses, Dashboard, Meta, and Reports.\n\n**Authentication:**\n1. Use 'Login' endpoint to get JWT token\n2. Token will be automatically saved to {{jwt_token}} variable\n3. All protected endpoints will use this token automatically\n\n**Default Users:**\n- Admin: admin / admin123\n- User: user / user123",
+		"name": "Financial Management API v1.0.0",
+		"description": "# Financial Management API\n\nComprehensive REST API for personal finance management.\n\n## Features\n- **Authentication**: JWT-based secure authentication\n- **Account Management**: Multiple account types (bank, wallet, savings, etc.)\n- **Transaction Tracking**: Income, expenses, and transfers\n- **Loan Management**: Track money lent and borrowed\n- **Recurring Expenses**: Manage subscriptions and recurring payments\n- **Reports & Analytics**: Financial insights and summaries\n\n## Authentication\n1. Use 'Login (Admin)' or 'Login (User)' to get JWT token\n2. Token is automatically saved to `{{jwt_token}}` variable\n3. All protected endpoints use this token automatically\n4. Token expires after 24 hours\n\n## Default Test Users\n- **Admin**: `admin` / `admin123` (Full access including user management)\n- **User**: `user` / `user123` (Standard user access)\n\n## Base URLs\n- **Local**: http://localhost:8080\n- **Docker**: http://localhost:8081\n\nFor detailed authentication guide, see API_AUTHENTICATION.md\n\n**API Version**: 1.0.0  \n**Last Updated**: October 10, 2025",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -19,12 +19,14 @@
 		{
 			"key": "baseUrl",
 			"value": "http://localhost:8080",
-			"type": "string"
+			"type": "string",
+			"description": "Base URL for the API (change to http://localhost:8081 for Docker)"
 		},
 		{
 			"key": "jwt_token",
 			"value": "",
-			"type": "string"
+			"type": "string",
+			"description": "JWT token obtained from login (automatically set)"
 		}
 	],
 	"item": [
@@ -712,10 +714,142 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/loans/summary",
+							"raw": "{{baseUrl}}/api/loans/reports/summary",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "loans", "summary"]
-						}
+							"path": ["api", "loans", "reports", "summary"]
+						},
+						"description": "Get comprehensive loan summary including totals and counts for both lent and borrowed money"
+					}
+				},
+				{
+					"name": "Get Overdue Loans Report",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/overdue",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "overdue"]
+						},
+						"description": "Get all loans that are past their due date"
+					}
+				},
+				{
+					"name": "Get Loans Due Soon",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/due-soon?daysAhead=7",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "due-soon"],
+							"query": [
+								{
+									"key": "daysAhead",
+									"value": "7",
+									"description": "Number of days ahead to check (default: 7)"
+								}
+							]
+						},
+						"description": "Get loans due within the specified number of days"
+					}
+				},
+				{
+					"name": "Get Urgent Loans",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/urgent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "urgent"]
+						},
+						"description": "Get all loans marked as urgent"
+					}
+				},
+				{
+					"name": "Get Total Amount Lent",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/total-lent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "total-lent"]
+						},
+						"description": "Get the total amount of money lent to others"
+					}
+				},
+				{
+					"name": "Get Total Amount Borrowed",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/total-borrowed",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "total-borrowed"]
+						},
+						"description": "Get the total amount of money borrowed from others"
+					}
+				},
+				{
+					"name": "Get Net Loan Position",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/reports/net-position",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "reports", "net-position"]
+						},
+						"description": "Get net loan position (total lent minus total borrowed)"
+					}
+				},
+				{
+					"name": "Mark Loan as Urgent",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1/urgent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1", "urgent"]
+						},
+						"description": "Mark a specific loan as urgent"
+					}
+				},
+				{
+					"name": "Mark Loan as Not Urgent",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1/not-urgent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1", "not-urgent"]
+						},
+						"description": "Remove urgent flag from a loan"
+					}
+				},
+				{
+					"name": "Record Loan Payment",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/loans/1/payment?paymentAmount=100.00",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "loans", "1", "payment"],
+							"query": [
+								{
+									"key": "paymentAmount",
+									"value": "100.00",
+									"description": "Amount of the payment"
+								}
+							]
+						},
+						"description": "Record a payment made towards a loan"
 					}
 				}
 			],
@@ -803,15 +937,55 @@
 					}
 				},
 				{
-					"name": "Deactivate Recurring Expense",
+					"name": "Mark Recurring Expense as Paid",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1/mark-paid",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1", "mark-paid"]
+						},
+						"description": "Mark a recurring expense as paid and update next due date"
+					}
+				},
+				{
+					"name": "Pause Recurring Expense",
 					"request": {
 						"method": "PATCH",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/recurring-expenses/1/deactivate",
+							"raw": "{{baseUrl}}/api/recurring-expenses/1/pause",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "recurring-expenses", "1", "deactivate"]
-						}
+							"path": ["api", "recurring-expenses", "1", "pause"]
+						},
+						"description": "Pause a recurring expense temporarily"
+					}
+				},
+				{
+					"name": "Resume Recurring Expense",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1/resume",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1", "resume"]
+						},
+						"description": "Resume a paused recurring expense"
+					}
+				},
+				{
+					"name": "Cancel Recurring Expense",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/recurring-expenses/1/cancel",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "recurring-expenses", "1", "cancel"]
+						},
+						"description": "Cancel a recurring expense permanently"
 					}
 				},
 				{
@@ -833,124 +1007,70 @@
 			"name": "Dashboard",
 			"item": [
 				{
-					"name": "Get Dashboard Summary",
+					"name": "Get Dashboard Data",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/dashboard/summary",
+							"raw": "{{baseUrl}}/api/dashboard",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "dashboard", "summary"]
+							"path": ["api", "dashboard"]
 						},
-						"description": "Get comprehensive dashboard summary with all financial metrics."
+						"description": "Get comprehensive dashboard data including net worth, accounts, recent transactions, active loans, and monthly spending breakdown."
 					}
 				}
 			],
-			"description": "Dashboard and summary endpoints. All require authentication."
+			"description": "Dashboard and overview endpoints showing financial summaries. All require authentication."
 		},
 		{
 			"name": "Reports",
 			"item": [
 				{
-					"name": "Get Expense Report",
+					"name": "Get Monthly Reports",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/reports/expenses?startDate=2025-01-01&endDate=2025-12-31",
+							"raw": "{{baseUrl}}/api/reports/monthly?start=2025-01&end=2025-12",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "reports", "expenses"],
+							"path": ["api", "reports", "monthly"],
 							"query": [
 								{
-									"key": "startDate",
-									"value": "2025-01-01"
+									"key": "start",
+									"value": "2025-01",
+									"description": "Start month in YYYY-MM format"
 								},
 								{
-									"key": "endDate",
-									"value": "2025-12-31"
+									"key": "end",
+									"value": "2025-12",
+									"description": "End month in YYYY-MM format"
 								}
 							]
-						}
-					}
-				},
-				{
-					"name": "Get Income Report",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/reports/income?startDate=2025-01-01&endDate=2025-12-31",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "reports", "income"],
-							"query": [
-								{
-									"key": "startDate",
-									"value": "2025-01-01"
-								},
-								{
-									"key": "endDate",
-									"value": "2025-12-31"
-								}
-							]
-						}
+						},
+						"description": "Get monthly financial reports showing income, expenses, and savings for each month in the date range."
 					}
 				}
 			],
-			"description": "Financial reports and analytics. All require authentication."
+			"description": "Financial reports and analytics showing trends over time. All require authentication."
 		},
 		{
 			"name": "Meta",
 			"item": [
 				{
-					"name": "Get Account Types",
+					"name": "Get Application Metadata",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/meta/account-types",
+							"raw": "{{baseUrl}}/api/meta",
 							"host": ["{{baseUrl}}"],
-							"path": ["api", "meta", "account-types"]
-						}
-					}
-				},
-				{
-					"name": "Get Category Types",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/meta/category-types",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "meta", "category-types"]
-						}
-					}
-				},
-				{
-					"name": "Get Transaction Types",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/meta/transaction-types",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "meta", "transaction-types"]
-						}
-					}
-				},
-				{
-					"name": "Get Loan Types",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/meta/loan-types",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "meta", "loan-types"]
-						}
+							"path": ["api", "meta"]
+						},
+						"description": "Get application statistics including counts of accounts, transactions, loans, categories, and last sync time."
 					}
 				}
 			],
-			"description": "Metadata endpoints for enum values. All require authentication."
+			"description": "Application metadata and statistics endpoints. All require authentication."
 		}
 	]
 }

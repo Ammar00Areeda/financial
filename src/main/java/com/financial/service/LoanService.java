@@ -18,6 +18,18 @@ import java.util.Optional;
 
 /**
  * Service class for loan-related business logic and reporting.
+ * 
+ * <p>This service manages loan operations for both money lent to others and money borrowed
+ * from others. It supports tracking of loan status, payments, due dates, reminders, and
+ * provides comprehensive reporting capabilities.</p>
+ * 
+ * <p><b>Security:</b> All methods require authentication. Operations are automatically
+ * scoped to the authenticated user retrieved via {@link SecurityUtils#getAuthenticatedUser()}.
+ * Users can only access and modify their own loans.</p>
+ * 
+ * @see Loan
+ * @see LoanRepository
+ * @see SecurityUtils
  */
 @Service
 @RequiredArgsConstructor
@@ -27,10 +39,27 @@ public class LoanService {
     private final LoanRepository loanRepository;
     
     /**
-     * Get all loans for the authenticated user with pagination.
+     * Retrieves all loans for the authenticated user with pagination support.
+     * 
+     * <p>Returns both LENT (money lent to others) and BORROWED (money borrowed from others)
+     * loans belonging to the authenticated user.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only returns loans belonging to
+     * the authenticated user.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * Pageable pageable = PageRequest.of(0, 20, Sort.by("loanDate").descending());
+     * Page<Loan> loans = loanService.getAllLoans(pageable);
+     * loans.forEach(loan -> 
+     *     System.out.println(loan.getLoanType() + ": $" + loan.getPrincipalAmount())
+     * );
+     * }</pre>
      *
-     * @param pageable pagination information
-     * @return page of loans
+     * @param pageable pagination information including page number, size, and sort order
+     * @return page of loans belonging to the authenticated user
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     @Transactional(readOnly = true)
     public Page<Loan> getAllLoans(Pageable pageable) {
@@ -279,10 +308,36 @@ public class LoanService {
     }
     
     /**
-     * Create a new loan for the authenticated user.
+     * Creates a new loan for the authenticated user.
+     * 
+     * <p>The loan is automatically associated with the authenticated user. If an interest
+     * rate is provided, the total amount is calculated using simple interest (Principal * 
+     * (1 + Rate)). The remaining amount is initialized to the total amount.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. The loan is associated with the
+     * authenticated user and cannot be transferred to another user.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * Loan loan = Loan.builder()
+     *     .personName("John Doe")
+     *     .loanType(LoanType.LENT)
+     *     .principalAmount(new BigDecimal("1000.00"))
+     *     .interestRate(new BigDecimal("5.0"))
+     *     .loanDate(LocalDateTime.now())
+     *     .dueDate(LocalDateTime.now().plusMonths(6))
+     *     .status(LoanStatus.ACTIVE)
+     *     .build();
+     * 
+     * Loan created = loanService.createLoan(loan);
+     * System.out.println("Loan created with ID: " + created.getId());
+     * System.out.println("Total amount with interest: $" + created.getTotalAmount());
+     * }</pre>
      *
-     * @param loan the loan to create
-     * @return the created loan
+     * @param loan the loan to create (must not be null)
+     * @return the persisted loan with generated ID and calculated amounts
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     public Loan createLoan(Loan loan) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
@@ -307,11 +362,32 @@ public class LoanService {
     }
     
     /**
-     * Update an existing loan for the authenticated user.
+     * Updates an existing loan for the authenticated user.
+     * 
+     * <p>Verifies that the loan exists and belongs to the authenticated user before
+     * updating. The user association cannot be changed.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only loans belonging to the
+     * authenticated user can be updated. The user association is immutable.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * Loan loan = loanService.getLoanById(123L)
+     *     .orElseThrow(() -> new NotFoundException("Loan not found"));
+     * 
+     * loan.setDueDate(LocalDateTime.now().plusMonths(3));
+     * loan.setIsUrgent(true);
+     * 
+     * Loan updated = loanService.updateLoan(loan);
+     * System.out.println("Loan updated: " + updated.getPersonName());
+     * }</pre>
      *
-     * @param loan the loan to update
-     * @return the updated loan
-     * @throws IllegalArgumentException if loan not found or doesn't belong to user
+     * @param loan the loan to update with modified fields
+     * @return the updated and persisted loan
+     * @throws IllegalArgumentException if the loan doesn't exist or doesn't belong to
+     *         the authenticated user
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     public Loan updateLoan(Loan loan) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
@@ -342,12 +418,37 @@ public class LoanService {
     }
     
     /**
-     * Record a payment for a loan belonging to the authenticated user.
+     * Records a payment for a loan belonging to the authenticated user.
+     * 
+     * <p>Updates the paid amount, remaining amount, and last payment date. Automatically
+     * updates the loan status to PARTIALLY_PAID if any payment is made, or PAID_OFF if
+     * the remaining amount reaches zero or below.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only loans belonging to the
+     * authenticated user can have payments recorded.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * // Record a $200 payment
+     * Loan loan = loanService.recordPayment(123L, new BigDecimal("200.00"));
+     * 
+     * System.out.println("Paid amount: $" + loan.getPaidAmount());
+     * System.out.println("Remaining: $" + loan.getRemainingAmount());
+     * System.out.println("Status: " + loan.getStatus());
+     * 
+     * // Check if loan is paid off
+     * if (loan.getStatus() == LoanStatus.PAID_OFF) {
+     *     System.out.println("Loan fully paid!");
+     * }
+     * }</pre>
      *
-     * @param loanId the loan ID
-     * @param paymentAmount the payment amount
-     * @return the updated loan
-     * @throws IllegalArgumentException if loan not found or doesn't belong to user
+     * @param loanId the ID of the loan to record payment for
+     * @param paymentAmount the amount of the payment (must be positive)
+     * @return the updated loan with new payment information and status
+     * @throws IllegalArgumentException if the loan doesn't exist or doesn't belong to
+     *         the authenticated user
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     public Loan recordPayment(Long loanId, BigDecimal paymentAmount) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
@@ -410,9 +511,35 @@ public class LoanService {
     // ========== REPORTING METHODS ==========
     
     /**
-     * Get loan summary report for the authenticated user.
+     * Generates a comprehensive loan summary report for the authenticated user.
+     * 
+     * <p>The report includes total amounts lent and borrowed, repayment amounts, net loan
+     * position, and counts of active and overdue loans. This provides a complete overview
+     * of the user's lending and borrowing activities.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only includes loans belonging to
+     * the authenticated user.</p>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * LoanSummaryReport report = loanService.getLoanSummaryReport();
+     * 
+     * System.out.println("Total Lent: $" + report.getTotalAmountLent());
+     * System.out.println("Total Borrowed: $" + report.getTotalAmountBorrowed());
+     * System.out.println("Net Position: $" + report.getNetLoanPosition());
+     * System.out.println("Active Lent Loans: " + report.getActiveLentLoansCount());
+     * System.out.println("Overdue Loans: " + report.getOverdueLoansCount());
+     * 
+     * if (report.getNetLoanPosition().compareTo(BigDecimal.ZERO) > 0) {
+     *     System.out.println("You are a net lender");
+     * } else {
+     *     System.out.println("You are a net borrower");
+     * }
+     * }</pre>
      *
-     * @return LoanSummaryReport containing key metrics
+     * @return comprehensive loan summary report with all key metrics
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
      */
     @Transactional(readOnly = true)
     public LoanSummaryReport getLoanSummaryReport() {

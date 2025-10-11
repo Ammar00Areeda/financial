@@ -1,5 +1,6 @@
 package com.financial.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.financial.entity.Account;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AccountDto {
     
     private Long id;
@@ -35,7 +37,6 @@ public class AccountDto {
     private Account.AccountType type;
     
     @NotNull(message = "Balance is required")
-    @DecimalMin(value = "0.00", message = "Balance must be greater than or equal to 0")
     private BigDecimal balance;
     
     @NotBlank(message = "Currency is required")
@@ -56,7 +57,7 @@ public class AccountDto {
     @Size(max = 50, message = "Icon must not exceed 50 characters")
     private String icon;
     
-    private Boolean isIncludeInBalance;
+    private Boolean includeInBalance;
     
     private LocalDateTime createdAt;
     

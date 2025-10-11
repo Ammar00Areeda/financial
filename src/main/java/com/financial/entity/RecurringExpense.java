@@ -71,12 +71,15 @@ public class RecurringExpense {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
+    @Builder.Default
     private Status status = Status.ACTIVE;
     
     @Column(name = "is_auto_pay")
+    @Builder.Default
     private Boolean isAutoPay = false;
     
     @Column(name = "reminder_days_before")
+    @Builder.Default
     private Integer reminderDaysBefore = 3;
     
     @Size(max = 200, message = "Provider must not exceed 200 characters")

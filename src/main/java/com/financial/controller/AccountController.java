@@ -1,6 +1,7 @@
 package com.financial.controller;
 
 import com.financial.dto.AccountDto;
+import com.financial.dto.AccountListDTO;
 import com.financial.dto.AccountResponseDto;
 import com.financial.entity.Account;
 import com.financial.mapper.AccountMapper;
@@ -9,13 +10,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,19 +42,28 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 class CreateAccountRequest {
+    @NotBlank(message = "Account name is required")
     private String name;
+    
+    @NotBlank(message = "Account type is required")
     private String type;
+    
+    @NotNull(message = "Initial balance is required")
     private BigDecimal initialBalance;
+    
+    @NotBlank(message = "Currency is required")
     private String currency;
 }
 
 /**
  * REST controller for Account management operations.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
 @Tag(name = "Accounts", description = "Account management operations")
+@SecurityRequirement(name = "Bearer Authentication")
 public class AccountController {
 
     private final AccountService accountService;
@@ -64,28 +78,15 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping
-    public ResponseEntity<AccountResponseDto> getAllAccounts() {
+    public ResponseEntity<List<AccountListDTO>> getAllAccounts() {
         
         List<Account> accounts = accountService.getAllAccounts();
         
-        List<AccountResponseDto.AccountDto> accountDtos = accounts.stream()
-                .map(account -> AccountResponseDto.AccountDto.builder()
-                        .id(account.getId().toString())
-                        .name(account.getName())
-                        .type(account.getType().toString().toLowerCase())
-                        .balance(account.getBalance())
-                        .currency(account.getCurrency())
-                        .institution(account.getBankName())
-                        .createdAt(account.getCreatedAt())
-                        .updatedAt(account.getUpdatedAt())
-                        .build())
+        List<AccountListDTO> accountDtos = accounts.stream()
+                .map(AccountListDTO::fromEntity)
                 .collect(Collectors.toList());
         
-        AccountResponseDto response = AccountResponseDto.builder()
-                .accounts(accountDtos)
-                .build();
-        
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(accountDtos);
     }
 
     @Operation(
@@ -99,31 +100,35 @@ public class AccountController {
     })
     @PostMapping
     public ResponseEntity<AccountResponseDto.AccountDto> createAccount(
-            @Parameter(description = "Account creation request") @RequestBody CreateAccountRequest request) {
+            @Parameter(description = "Account creation request") @Valid @RequestBody CreateAccountRequest request) {
         
-        Account account = Account.builder()
-                .name(request.getName())
-                .type(Account.AccountType.valueOf(request.getType().toUpperCase()))
-                .balance(request.getInitialBalance())
-                .currency(request.getCurrency())
-                .status(Account.AccountStatus.ACTIVE)
-                .includeInBalance(true)
-                .build();
-        
-        Account createdAccount = accountService.createAccount(account);
-        
-        AccountResponseDto.AccountDto response = AccountResponseDto.AccountDto.builder()
-                .id(createdAccount.getId().toString())
-                .name(createdAccount.getName())
-                .type(createdAccount.getType().toString().toLowerCase())
-                .balance(createdAccount.getBalance())
-                .currency(createdAccount.getCurrency())
-                .institution(createdAccount.getBankName())
-                .createdAt(createdAccount.getCreatedAt())
-                .updatedAt(createdAccount.getUpdatedAt())
-                .build();
-        
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        try {
+            Account account = Account.builder()
+                    .name(request.getName())
+                    .type(Account.AccountType.valueOf(request.getType().toUpperCase()))
+                    .balance(request.getInitialBalance())
+                    .currency(request.getCurrency())
+                    .status(Account.AccountStatus.ACTIVE)
+                    .includeInBalance(true)
+                    .build();
+            
+            Account createdAccount = accountService.createAccount(account);
+            
+            AccountResponseDto.AccountDto response = AccountResponseDto.AccountDto.builder()
+                    .id(createdAccount.getId().toString())
+                    .name(createdAccount.getName())
+                    .type(createdAccount.getType().toString().toLowerCase())
+                    .balance(createdAccount.getBalance())
+                    .currency(createdAccount.getCurrency())
+                    .institution(createdAccount.getBankName())
+                    .createdAt(createdAccount.getCreatedAt())
+                    .updatedAt(createdAccount.getUpdatedAt())
+                    .build();
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @Operation(
@@ -135,9 +140,12 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/active")
-    public ResponseEntity<List<Account>> getAllActiveAccounts() {
+    public ResponseEntity<List<AccountListDTO>> getAllActiveAccounts() {
         List<Account> accounts = accountService.getAllActiveAccounts();
-        return ResponseEntity.ok(accounts);
+        List<AccountListDTO> accountDtos = accounts.stream()
+                .map(AccountListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(accountDtos);
     }
 
     @Operation(
@@ -150,13 +158,16 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<Account>> getAccountsByType(
+    public ResponseEntity<List<AccountListDTO>> getAccountsByType(
             @Parameter(description = "Account type", required = true) @PathVariable String type) {
         
         try {
             Account.AccountType accountType = Account.AccountType.valueOf(type.toUpperCase());
             List<Account> accounts = accountService.getAccountsByType(accountType);
-            return ResponseEntity.ok(accounts);
+            List<AccountListDTO> accountDtos = accounts.stream()
+                    .map(AccountListDTO::fromEntity)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(accountDtos);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -172,13 +183,16 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/active/type/{type}")
-    public ResponseEntity<List<Account>> getActiveAccountsByType(
+    public ResponseEntity<List<AccountListDTO>> getActiveAccountsByType(
             @Parameter(description = "Account type", required = true) @PathVariable String type) {
         
         try {
             Account.AccountType accountType = Account.AccountType.valueOf(type.toUpperCase());
             List<Account> accounts = accountService.getActiveAccountsByType(accountType);
-            return ResponseEntity.ok(accounts);
+            List<AccountListDTO> accountDtos = accounts.stream()
+                    .map(AccountListDTO::fromEntity)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(accountDtos);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
@@ -193,9 +207,12 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/included-in-balance")
-    public ResponseEntity<List<Account>> getAccountsIncludedInBalance() {
+    public ResponseEntity<List<AccountListDTO>> getAccountsIncludedInBalance() {
         List<Account> accounts = accountService.getAccountsIncludedInBalance();
-        return ResponseEntity.ok(accounts);
+        List<AccountListDTO> accountDtos = accounts.stream()
+                .map(AccountListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(accountDtos);
     }
 
     @Operation(
@@ -244,11 +261,12 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Account> getAccountById(
+    public ResponseEntity<AccountDto> getAccountById(
             @Parameter(description = "Account ID", required = true) @PathVariable Long id) {
         
         Optional<Account> account = accountService.getAccountById(id);
-        return account.map(ResponseEntity::ok)
+        return account.map(accountMapper::toDto)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -261,11 +279,14 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/search")
-    public ResponseEntity<List<Account>> searchAccountsByName(
+    public ResponseEntity<List<AccountListDTO>> searchAccountsByName(
             @Parameter(description = "Name pattern to search for") @RequestParam String name) {
         
         List<Account> accounts = accountService.searchAccountsByName(name);
-        return ResponseEntity.ok(accounts);
+        List<AccountListDTO> accountDtos = accounts.stream()
+                .map(AccountListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(accountDtos);
     }
 
     @Operation(
@@ -277,11 +298,14 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/active/search")
-    public ResponseEntity<List<Account>> searchActiveAccountsByName(
+    public ResponseEntity<List<AccountListDTO>> searchActiveAccountsByName(
             @Parameter(description = "Name pattern to search for") @RequestParam String name) {
         
         List<Account> accounts = accountService.searchActiveAccountsByName(name);
-        return ResponseEntity.ok(accounts);
+        List<AccountListDTO> accountDtos = accounts.stream()
+                .map(AccountListDTO::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(accountDtos);
     }
 
 
@@ -296,16 +320,31 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<Account> updateAccount(
+    public ResponseEntity<AccountDto> updateAccount(
             @Parameter(description = "Account ID", required = true) @PathVariable Long id,
-            @Valid @RequestBody Account account) {
+            @Valid @RequestBody AccountDto accountDto) {
         
         try {
-            account.setId(id);
-            Account updatedAccount = accountService.updateAccount(account);
-            return ResponseEntity.ok(updatedAccount);
+            // Fetch existing account
+            Optional<Account> existingAccountOpt = accountService.getAccountById(id);
+            if (existingAccountOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Update fields from DTO
+            Account existingAccount = existingAccountOpt.get();
+            accountMapper.updateEntityFromDto(existingAccount, accountDto);
+            
+            // Save updated account
+            Account updatedAccount = accountService.updateAccount(existingAccount);
+            return ResponseEntity.ok(accountMapper.toDto(updatedAccount));
         } catch (IllegalArgumentException e) {
+            // Duplicate name error
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            // Log the actual exception for debugging
+            log.error("Error updating account: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
@@ -319,13 +358,13 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping("/{id}/balance")
-    public ResponseEntity<Account> updateAccountBalance(
+    public ResponseEntity<AccountDto> updateAccountBalance(
             @Parameter(description = "Account ID", required = true) @PathVariable Long id,
             @Parameter(description = "New balance") @RequestParam BigDecimal balance) {
         
         try {
             Account account = accountService.updateAccountBalance(id, balance);
-            return ResponseEntity.ok(account);
+            return ResponseEntity.ok(accountMapper.toDto(account));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
@@ -341,13 +380,13 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping("/{id}/add")
-    public ResponseEntity<Account> addToAccountBalance(
+    public ResponseEntity<AccountDto> addToAccountBalance(
             @Parameter(description = "Account ID", required = true) @PathVariable Long id,
             @Parameter(description = "Amount to add") @RequestParam BigDecimal amount) {
         
         try {
             Account account = accountService.addToAccountBalance(id, amount);
-            return ResponseEntity.ok(account);
+            return ResponseEntity.ok(accountMapper.toDto(account));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
@@ -363,13 +402,13 @@ public class AccountController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PatchMapping("/{id}/subtract")
-    public ResponseEntity<Account> subtractFromAccountBalance(
+    public ResponseEntity<AccountDto> subtractFromAccountBalance(
             @Parameter(description = "Account ID", required = true) @PathVariable Long id,
             @Parameter(description = "Amount to subtract") @RequestParam BigDecimal amount) {
         
         try {
             Account account = accountService.subtractFromAccountBalance(id, amount);
-            return ResponseEntity.ok(account);
+            return ResponseEntity.ok(accountMapper.toDto(account));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }

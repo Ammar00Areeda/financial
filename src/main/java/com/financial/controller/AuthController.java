@@ -8,6 +8,9 @@ import com.financial.entity.User;
 import com.financial.security.JwtUtil;
 import com.financial.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +45,15 @@ public class AuthController {
      * @return the created user details
      */
     @PostMapping("/register")
-    @Operation(summary = "Register a new user", description = "Creates a new user account")
+    @Operation(
+            summary = "Register a new user", 
+            description = "Creates a new user account. No authentication required."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "User registered successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad request - validation errors or duplicate username/email"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDto registerRequest) {
         log.info("Registration request for username: {}", registerRequest.getUsername());
 
@@ -93,7 +104,15 @@ public class AuthController {
      * @return the authentication response with JWT token
      */
     @PostMapping("/login")
-    @Operation(summary = "Authenticate user", description = "Login and receive JWT token")
+    @Operation(
+            summary = "Authenticate user", 
+            description = "Login with username and password to receive JWT token. No authentication required."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - invalid credentials"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     public ResponseEntity<?> login(@Valid @RequestBody AuthenticationRequestDto authRequest) {
         log.info("Login attempt for username: {}", authRequest.getUsername());
 
@@ -125,6 +144,10 @@ public class AuthController {
             log.error("Invalid credentials for username: {}", authRequest.getUsername());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ErrorResponse("Invalid username or password"));
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            log.error("Account is disabled for username: {}", authRequest.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("Account is disabled"));
         } catch (Exception e) {
             log.error("Error during login: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -139,8 +162,17 @@ public class AuthController {
      * @return validation response
      */
     @GetMapping("/validate")
-    @Operation(summary = "Validate JWT token", description = "Check if JWT token is valid")
-    public ResponseEntity<?> validateToken(@RequestParam String token) {
+    @Operation(
+            summary = "Validate JWT token", 
+            description = "Check if JWT token is valid. No authentication required."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token is valid"),
+            @ApiResponse(responseCode = "401", description = "Token is invalid or expired"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> validateToken(
+            @Parameter(description = "JWT token to validate", required = true) @RequestParam String token) {
         try {
             String username = jwtUtil.extractUsername(token);
             UserDetails userDetails = userService.loadUserByUsername(username);
