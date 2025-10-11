@@ -1,5 +1,6 @@
 package com.financial.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.financial.entity.Loan;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
@@ -39,6 +40,7 @@ public class LoanDto {
     @NotNull(message = "Loan type is required")
     private Loan.LoanType loanType;
     
+    @JsonAlias("amount")
     @NotNull(message = "Principal amount is required")
     @DecimalMin(value = "0.01", message = "Principal amount must be greater than 0")
     private BigDecimal principalAmount;

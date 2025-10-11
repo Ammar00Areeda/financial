@@ -5,10 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -100,6 +97,7 @@ public class Account {
     /**
      * Enum representing different types of accounts.
      */
+    @Getter
     public enum AccountType {
         WALLET("Wallet"),
         BANK_ACCOUNT("Bank Account"),
@@ -114,10 +112,7 @@ public class Account {
         AccountType(String displayName) {
             this.displayName = displayName;
         }
-        
-        public String getDisplayName() {
-            return displayName;
-        }
+
     }
     
     /**
