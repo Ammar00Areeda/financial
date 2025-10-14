@@ -7,11 +7,6 @@ import com.financial.dto.UserDto;
 import com.financial.entity.User;
 import com.financial.security.JwtUtil;
 import com.financial.service.UserService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,34 +21,20 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * REST controller for authentication operations.
+ * Implements AuthApi interface which contains all OpenAPI documentation.
  */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Authentication", description = "Authentication and registration endpoints")
-public class AuthController {
+public class AuthController implements AuthApi {
 
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
     private final JwtUtil jwtUtil;
 
-    /**
-     * Register a new user.
-     *
-     * @param registerRequest the registration request
-     * @return the created user details
-     */
+    @Override
     @PostMapping("/register")
-    @Operation(
-            summary = "Register a new user", 
-            description = "Creates a new user account. No authentication required."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "User registered successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors or duplicate username/email"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDto registerRequest) {
         log.info("Registration request for username: {}", registerRequest.getUsername());
 
@@ -97,22 +78,8 @@ public class AuthController {
         }
     }
 
-    /**
-     * Authenticate user and return JWT token.
-     *
-     * @param authRequest the authentication request
-     * @return the authentication response with JWT token
-     */
+    @Override
     @PostMapping("/login")
-    @Operation(
-            summary = "Authenticate user", 
-            description = "Login with username and password to receive JWT token. No authentication required."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - invalid credentials"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
     public ResponseEntity<?> login(@Valid @RequestBody AuthenticationRequestDto authRequest) {
         log.info("Login attempt for username: {}", authRequest.getUsername());
 
@@ -155,24 +122,9 @@ public class AuthController {
         }
     }
 
-    /**
-     * Validate JWT token.
-     *
-     * @param token the JWT token
-     * @return validation response
-     */
+    @Override
     @GetMapping("/validate")
-    @Operation(
-            summary = "Validate JWT token", 
-            description = "Check if JWT token is valid. No authentication required."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Token is valid"),
-            @ApiResponse(responseCode = "401", description = "Token is invalid or expired"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    public ResponseEntity<?> validateToken(
-            @Parameter(description = "JWT token to validate", required = true) @RequestParam String token) {
+    public ResponseEntity<?> validateToken(@RequestParam String token) {
         try {
             String username = jwtUtil.extractUsername(token);
             UserDetails userDetails = userService.loadUserByUsername(username);
@@ -200,4 +152,3 @@ public class AuthController {
      */
     record ValidationResponse(boolean valid, String message) {}
 }
-

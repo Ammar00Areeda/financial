@@ -1,7 +1,9 @@
 package com.financial.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.financial.dto.TransactionCreateRequestDto;
 import com.financial.dto.TransactionDto;
+import com.financial.dto.TransactionUpdateRequestDto;
 import com.financial.entity.Account;
 import com.financial.entity.Category;
 import com.financial.entity.Transaction;
@@ -171,7 +173,7 @@ class TransactionControllerIntegrationTest {
 
     @Test
     void createTransaction_WithValidExpense_ShouldReturnCreated() throws Exception {
-        TransactionDto dto = TransactionDto.builder()
+        TransactionCreateRequestDto dto = TransactionCreateRequestDto.builder()
                 .description("Grocery Shopping")
                 .amount(new BigDecimal("150.00"))
                 .type(Transaction.TransactionType.EXPENSE)
@@ -196,7 +198,7 @@ class TransactionControllerIntegrationTest {
 
     @Test
     void createTransaction_WithValidIncome_ShouldReturnCreated() throws Exception {
-        TransactionDto dto = TransactionDto.builder()
+        TransactionCreateRequestDto dto = TransactionCreateRequestDto.builder()
                 .description("Monthly Salary")
                 .amount(new BigDecimal("5000.00"))
                 .type(Transaction.TransactionType.INCOME)
@@ -217,7 +219,7 @@ class TransactionControllerIntegrationTest {
 
     @Test
     void createTransaction_WithTransfer_ShouldReturnCreated() throws Exception {
-        TransactionDto dto = TransactionDto.builder()
+        TransactionCreateRequestDto dto = TransactionCreateRequestDto.builder()
                 .description("Transfer to Savings")
                 .amount(new BigDecimal("1000.00"))
                 .type(Transaction.TransactionType.TRANSFER)
@@ -255,7 +257,7 @@ class TransactionControllerIntegrationTest {
 
     @Test
     void createTransaction_WithInvalidAccount_ShouldReturnNotFound() throws Exception {
-        TransactionDto dto = TransactionDto.builder()
+        TransactionCreateRequestDto dto = TransactionCreateRequestDto.builder()
                 .description("Test Transaction")
                 .amount(new BigDecimal("100.00"))
                 .type(Transaction.TransactionType.EXPENSE)
@@ -272,7 +274,7 @@ class TransactionControllerIntegrationTest {
 
     @Test
     void createTransaction_WithInvalidCategory_ShouldReturnNotFound() throws Exception {
-        TransactionDto dto = TransactionDto.builder()
+        TransactionCreateRequestDto dto = TransactionCreateRequestDto.builder()
                 .description("Test Transaction")
                 .amount(new BigDecimal("100.00"))
                 .type(Transaction.TransactionType.EXPENSE)
@@ -290,7 +292,7 @@ class TransactionControllerIntegrationTest {
 
     @Test
     void createTransaction_WithRecurringFlag_ShouldReturnCreated() throws Exception {
-        TransactionDto dto = TransactionDto.builder()
+        TransactionCreateRequestDto dto = TransactionCreateRequestDto.builder()
                 .description("Recurring Bill")
                 .amount(new BigDecimal("100.00"))
                 .type(Transaction.TransactionType.EXPENSE)
@@ -596,7 +598,7 @@ class TransactionControllerIntegrationTest {
 
     @Test
     void updateTransaction_WithValidData_ShouldReturnUpdated() throws Exception {
-        TransactionDto dto = TransactionDto.builder()
+        TransactionUpdateRequestDto dto = TransactionUpdateRequestDto.builder()
                 .description("Updated Description")
                 .amount(new BigDecimal("75.00"))
                 .type(Transaction.TransactionType.EXPENSE)
@@ -618,7 +620,7 @@ class TransactionControllerIntegrationTest {
 
     @Test
     void updateTransaction_WithNonExistingId_ShouldReturnNotFound() throws Exception {
-        TransactionDto dto = TransactionDto.builder()
+        TransactionUpdateRequestDto dto = TransactionUpdateRequestDto.builder()
                 .description("Updated Description")
                 .amount(new BigDecimal("75.00"))
                 .type(Transaction.TransactionType.EXPENSE)
@@ -793,7 +795,7 @@ class TransactionControllerIntegrationTest {
     @Test
     void createMultipleTransactions_AndCalculateTotals_ShouldWorkCorrectly() throws Exception {
         // Create multiple transactions of different types
-        TransactionDto income1 = TransactionDto.builder()
+        TransactionCreateRequestDto income1 = TransactionCreateRequestDto.builder()
                 .description("Salary")
                 .amount(new BigDecimal("5000.00"))
                 .type(Transaction.TransactionType.INCOME)
@@ -801,7 +803,7 @@ class TransactionControllerIntegrationTest {
                 .transactionDate(LocalDateTime.now())
                 .build();
 
-        TransactionDto expense1 = TransactionDto.builder()
+        TransactionCreateRequestDto expense1 = TransactionCreateRequestDto.builder()
                 .description("Rent")
                 .amount(new BigDecimal("1500.00"))
                 .type(Transaction.TransactionType.EXPENSE)

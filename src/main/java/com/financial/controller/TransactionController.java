@@ -1,7 +1,9 @@
 package com.financial.controller;
 
+import com.financial.dto.TransactionCreateRequestDto;
 import com.financial.dto.TransactionDto;
 import com.financial.dto.TransactionListDTO;
+import com.financial.dto.TransactionUpdateRequestDto;
 import com.financial.entity.Account;
 import com.financial.entity.Category;
 import com.financial.entity.Transaction;
@@ -9,12 +11,6 @@ import com.financial.mapper.TransactionMapper;
 import com.financial.service.AccountService;
 import com.financial.service.CategoryService;
 import com.financial.service.TransactionService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,28 +31,20 @@ import java.util.stream.Collectors;
 
 /**
  * REST controller for Transaction management operations.
+ * Implements TransactionApi interface which contains all OpenAPI documentation.
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/transactions")
 @RequiredArgsConstructor
-@Tag(name = "Transactions", description = "Transaction management operations")
-@SecurityRequirement(name = "Bearer Authentication")
-public class TransactionController {
+public class TransactionController implements TransactionApi {
 
     private final TransactionService transactionService;
     private final AccountService accountService;
     private final CategoryService categoryService;
     private final TransactionMapper transactionMapper;
 
-    @Operation(
-            summary = "Get last 5 transactions",
-            description = "Retrieve the last 5 transactions ordered by date descending"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved last 5 transactions"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/last-5")
     public ResponseEntity<List<TransactionListDTO>> getLast5Transactions() {
         List<Transaction> transactions = transactionService.getLast5Transactions();
@@ -66,17 +54,10 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get last N transactions",
-            description = "Retrieve the last N transactions ordered by date descending"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved last N transactions"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/last")
     public ResponseEntity<List<TransactionListDTO>> getLastTransactions(
-            @Parameter(description = "Number of transactions to retrieve") @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "10") int limit) {
         List<Transaction> transactions = transactionService.getLastTransactions(limit);
         List<TransactionListDTO> transactionDtos = transactions.stream()
                 .map(TransactionListDTO::fromEntity)
@@ -84,19 +65,12 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get all transactions",
-            description = "Retrieve a list of all transactions with pagination support"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved transactions"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping
     public ResponseEntity<Page<TransactionListDTO>> getAllTransactions(
-            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort criteria (field,direction)") @RequestParam(defaultValue = "transactionDate,desc") String sort) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "transactionDate,desc") String sort) {
         
         String[] sortParams = sort.split(",");
         String sortField = sortParams[0];
@@ -110,19 +84,9 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get transactions by account",
-            description = "Retrieve transactions for a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved transactions by account"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}")
-    public ResponseEntity<List<TransactionListDTO>> getTransactionsByAccount(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
-        
+    public ResponseEntity<List<TransactionListDTO>> getTransactionsByAccount(@PathVariable Long accountId) {
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -135,21 +99,13 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get transactions by account with pagination",
-            description = "Retrieve transactions for a specific account with pagination"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved transactions by account"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}/paginated")
     public ResponseEntity<Page<TransactionListDTO>> getTransactionsByAccountPaginated(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId,
-            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort criteria (field,direction)") @RequestParam(defaultValue = "transactionDate,desc") String sort) {
+            @PathVariable Long accountId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "transactionDate,desc") String sort) {
         
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
@@ -168,19 +124,11 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get last N transactions by account",
-            description = "Retrieve the last N transactions for a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved last N transactions by account"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}/last")
     public ResponseEntity<List<TransactionListDTO>> getLastTransactionsByAccount(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId,
-            @Parameter(description = "Number of transactions to retrieve") @RequestParam(defaultValue = "10") int limit) {
+            @PathVariable Long accountId,
+            @RequestParam(defaultValue = "10") int limit) {
         
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
@@ -194,19 +142,9 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get transactions by type",
-            description = "Retrieve transactions filtered by type (INCOME, EXPENSE, TRANSFER)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved transactions by type"),
-            @ApiResponse(responseCode = "400", description = "Invalid transaction type"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<TransactionListDTO>> getTransactionsByType(
-            @Parameter(description = "Transaction type", required = true) @PathVariable String type) {
-        
+    public ResponseEntity<List<TransactionListDTO>> getTransactionsByType(@PathVariable String type) {
         try {
             Transaction.TransactionType transactionType = Transaction.TransactionType.valueOf(type.toUpperCase());
             List<Transaction> transactions = transactionService.getTransactionsByType(transactionType);
@@ -219,19 +157,9 @@ public class TransactionController {
         }
     }
 
-    @Operation(
-            summary = "Get transactions by category",
-            description = "Retrieve transactions filtered by category"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved transactions by category"),
-            @ApiResponse(responseCode = "404", description = "Category not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<TransactionListDTO>> getTransactionsByCategory(
-            @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId) {
-        
+    public ResponseEntity<List<TransactionListDTO>> getTransactionsByCategory(@PathVariable Long categoryId) {
         Optional<Category> category = categoryService.getCategoryById(categoryId);
         if (category.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -244,18 +172,11 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get transactions by date range",
-            description = "Retrieve transactions within a specific date range"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved transactions by date range"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/date-range")
     public ResponseEntity<List<TransactionListDTO>> getTransactionsByDateRange(
-            @Parameter(description = "Start date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @Parameter(description = "End date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
         List<Transaction> transactions = transactionService.getTransactionsByDateRange(startDate, endDate);
         List<TransactionListDTO> transactionDtos = transactions.stream()
@@ -264,18 +185,11 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get transactions by amount range",
-            description = "Retrieve transactions within a specific amount range"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved transactions by amount range"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/amount-range")
     public ResponseEntity<List<TransactionListDTO>> getTransactionsByAmountRange(
-            @Parameter(description = "Minimum amount") @RequestParam BigDecimal minAmount,
-            @Parameter(description = "Maximum amount") @RequestParam BigDecimal maxAmount) {
+            @RequestParam BigDecimal minAmount,
+            @RequestParam BigDecimal maxAmount) {
         
         List<Transaction> transactions = transactionService.getTransactionsByAmountRange(minAmount, maxAmount);
         List<TransactionListDTO> transactionDtos = transactions.stream()
@@ -284,18 +198,9 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Search transactions by description",
-            description = "Search transactions by description containing the provided text (case-insensitive)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved matching transactions"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/search")
-    public ResponseEntity<List<TransactionListDTO>> searchTransactionsByDescription(
-            @Parameter(description = "Description pattern to search for") @RequestParam String description) {
-        
+    public ResponseEntity<List<TransactionListDTO>> searchTransactionsByDescription(@RequestParam String description) {
         List<Transaction> transactions = transactionService.searchTransactionsByDescription(description);
         List<TransactionListDTO> transactionDtos = transactions.stream()
                 .map(TransactionListDTO::fromEntity)
@@ -303,52 +208,43 @@ public class TransactionController {
         return ResponseEntity.ok(transactionDtos);
     }
 
-    @Operation(
-            summary = "Get transaction by ID",
-            description = "Retrieve a specific transaction by its ID"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Transaction found"),
-            @ApiResponse(responseCode = "404", description = "Transaction not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/{id}")
-    public ResponseEntity<TransactionDto> getTransactionById(
-            @Parameter(description = "Transaction ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<TransactionDto> getTransactionById(@PathVariable Long id) {
         Optional<Transaction> transaction = transactionService.getTransactionById(id);
         return transaction.map(transactionMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(
-            summary = "Create a new transaction",
-            description = "Create a new transaction in the system"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Transaction created successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors"),
-            @ApiResponse(responseCode = "404", description = "Account or category not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PostMapping
-    public ResponseEntity<TransactionDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto) {
+    public ResponseEntity<TransactionDto> createTransaction(
+            @Valid @RequestBody TransactionCreateRequestDto request) {
         try {
-            Transaction transaction = transactionMapper.toEntity(transactionDto);
-            
             // Validate account exists
-            if (transactionDto.getAccountId() != null) {
-                Optional<Account> account = accountService.getAccountById(transactionDto.getAccountId());
-                if (account.isEmpty()) {
-                    return ResponseEntity.notFound().build();
-                }
-                transaction.setAccount(account.get());
+            Optional<Account> account = accountService.getAccountById(request.getAccountId());
+            if (account.isEmpty()) {
+                return ResponseEntity.notFound().build();
             }
             
+            Transaction transaction = Transaction.builder()
+                    .description(request.getDescription())
+                    .amount(request.getAmount())
+                    .type(request.getType())
+                    .account(account.get())
+                    .transactionDate(request.getTransactionDate())
+                    .notes(request.getNotes())
+                    .location(request.getLocation())
+                    .referenceNumber(request.getReferenceNumber())
+                    .isRecurring(request.getIsRecurring() != null ? request.getIsRecurring() : false)
+                    .recurringFrequency(request.getRecurringFrequency())
+                    .recurringEndDate(request.getRecurringEndDate())
+                    .build();
+            
             // Validate category exists if provided
-            if (transactionDto.getCategoryId() != null) {
-                Optional<Category> category = categoryService.getCategoryById(transactionDto.getCategoryId());
+            if (request.getCategoryId() != null) {
+                Optional<Category> category = categoryService.getCategoryById(request.getCategoryId());
                 if (category.isEmpty()) {
                     return ResponseEntity.notFound().build();
                 }
@@ -356,8 +252,8 @@ public class TransactionController {
             }
             
             // Validate transfer account exists if provided
-            if (transactionDto.getTransferToAccountId() != null) {
-                Optional<Account> transferAccount = accountService.getAccountById(transactionDto.getTransferToAccountId());
+            if (request.getTransferToAccountId() != null) {
+                Optional<Account> transferAccount = accountService.getAccountById(request.getTransferToAccountId());
                 if (transferAccount.isEmpty()) {
                     return ResponseEntity.notFound().build();
                 }
@@ -372,6 +268,7 @@ public class TransactionController {
             if (e.getMessage() != null && e.getMessage().contains("not found")) {
                 return ResponseEntity.notFound().build();
             }
+            log.error("Error creating transaction: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             // Log and return internal server error for unexpected exceptions
@@ -380,20 +277,11 @@ public class TransactionController {
         }
     }
 
-    @Operation(
-            summary = "Update transaction",
-            description = "Update an existing transaction"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Transaction updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors"),
-            @ApiResponse(responseCode = "404", description = "Transaction not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<TransactionDto> updateTransaction(
-            @Parameter(description = "Transaction ID", required = true) @PathVariable Long id,
-            @Valid @RequestBody TransactionDto transactionDto) {
+            @PathVariable Long id,
+            @Valid @RequestBody TransactionUpdateRequestDto request) {
         
         try {
             // Fetch existing transaction
@@ -404,21 +292,30 @@ public class TransactionController {
             
             Transaction existingTransaction = existingTransactionOpt.get();
             
-            // Update fields from DTO
-            transactionMapper.updateEntityFromDto(existingTransaction, transactionDto);
+            // Update fields from request DTO
+            existingTransaction.setDescription(request.getDescription());
+            existingTransaction.setAmount(request.getAmount());
+            existingTransaction.setType(request.getType());
+            existingTransaction.setTransactionDate(request.getTransactionDate());
+            existingTransaction.setNotes(request.getNotes());
+            existingTransaction.setLocation(request.getLocation());
+            existingTransaction.setReferenceNumber(request.getReferenceNumber());
+            if (request.getIsRecurring() != null) {
+                existingTransaction.setIsRecurring(request.getIsRecurring());
+            }
+            existingTransaction.setRecurringFrequency(request.getRecurringFrequency());
+            existingTransaction.setRecurringEndDate(request.getRecurringEndDate());
             
             // Validate and set account if changed
-            if (transactionDto.getAccountId() != null) {
-                Optional<Account> account = accountService.getAccountById(transactionDto.getAccountId());
-                if (account.isEmpty()) {
-                    return ResponseEntity.notFound().build();
-                }
-                existingTransaction.setAccount(account.get());
+            Optional<Account> account = accountService.getAccountById(request.getAccountId());
+            if (account.isEmpty()) {
+                return ResponseEntity.notFound().build();
             }
+            existingTransaction.setAccount(account.get());
             
             // Validate and set category if provided
-            if (transactionDto.getCategoryId() != null) {
-                Optional<Category> category = categoryService.getCategoryById(transactionDto.getCategoryId());
+            if (request.getCategoryId() != null) {
+                Optional<Category> category = categoryService.getCategoryById(request.getCategoryId());
                 if (category.isEmpty()) {
                     return ResponseEntity.notFound().build();
                 }
@@ -428,8 +325,8 @@ public class TransactionController {
             }
             
             // Validate and set transfer account if provided
-            if (transactionDto.getTransferToAccountId() != null) {
-                Optional<Account> transferAccount = accountService.getAccountById(transactionDto.getTransferToAccountId());
+            if (request.getTransferToAccountId() != null) {
+                Optional<Account> transferAccount = accountService.getAccountById(request.getTransferToAccountId());
                 if (transferAccount.isEmpty()) {
                     return ResponseEntity.notFound().build();
                 }
@@ -446,6 +343,7 @@ public class TransactionController {
             if (e.getMessage() != null && e.getMessage().contains("not found")) {
                 return ResponseEntity.notFound().build();
             }
+            log.error("Error updating transaction: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             // Log and return internal server error for unexpected exceptions
@@ -454,19 +352,9 @@ public class TransactionController {
         }
     }
 
-    @Operation(
-            summary = "Delete transaction",
-            description = "Delete a transaction from the system"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Transaction deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Transaction not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTransaction(
-            @Parameter(description = "Transaction ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
         try {
             transactionService.deleteTransaction(id);
             return ResponseEntity.noContent().build();
@@ -475,19 +363,9 @@ public class TransactionController {
         }
     }
 
-    @Operation(
-            summary = "Get total amount by type",
-            description = "Calculate total amount for a specific transaction type"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully calculated total amount by type"),
-            @ApiResponse(responseCode = "400", description = "Invalid transaction type"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/total-amount/type/{type}")
-    public ResponseEntity<BigDecimal> getTotalAmountByType(
-            @Parameter(description = "Transaction type", required = true) @PathVariable String type) {
-        
+    public ResponseEntity<BigDecimal> getTotalAmountByType(@PathVariable String type) {
         try {
             Transaction.TransactionType transactionType = Transaction.TransactionType.valueOf(type.toUpperCase());
             BigDecimal totalAmount = transactionService.calculateTotalAmountByType(transactionType);
@@ -497,19 +375,9 @@ public class TransactionController {
         }
     }
 
-    @Operation(
-            summary = "Get total income for account",
-            description = "Calculate total income amount for a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully calculated total income"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}/total-income")
-    public ResponseEntity<BigDecimal> getTotalIncomeByAccount(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
-        
+    public ResponseEntity<BigDecimal> getTotalIncomeByAccount(@PathVariable Long accountId) {
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -519,19 +387,9 @@ public class TransactionController {
         return ResponseEntity.ok(totalIncome);
     }
 
-    @Operation(
-            summary = "Get total expense for account",
-            description = "Calculate total expense amount for a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully calculated total expense"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}/total-expense")
-    public ResponseEntity<BigDecimal> getTotalExpenseByAccount(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
-        
+    public ResponseEntity<BigDecimal> getTotalExpenseByAccount(@PathVariable Long accountId) {
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
             return ResponseEntity.notFound().build();

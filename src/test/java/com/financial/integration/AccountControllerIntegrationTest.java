@@ -1,6 +1,7 @@
 package com.financial.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.financial.dto.AccountUpdateRequestDto;
 import com.financial.entity.Account;
 import com.financial.entity.User;
 import com.financial.repository.AccountRepository;
@@ -115,7 +116,7 @@ class AccountControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Savings Account"))
-                .andExpect(jsonPath("$.type").value("savings"))
+                .andExpect(jsonPath("$.type").value("SAVINGS"))
                 .andExpect(jsonPath("$.balance").value(5000.00))
                 .andExpect(jsonPath("$.currency").value("USD"))
                 .andExpect(jsonPath("$.id").exists());
@@ -135,7 +136,7 @@ class AccountControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Wallet"))
-                .andExpect(jsonPath("$.type").value("wallet"))
+                .andExpect(jsonPath("$.type").value("WALLET"))
                 .andExpect(jsonPath("$.balance").value(100.00));
     }
 
@@ -474,7 +475,7 @@ class AccountControllerIntegrationTest {
 
     @Test
     void updateAccount_WithValidData_ShouldReturnUpdated() throws Exception {
-        Account updateData = Account.builder()
+        AccountUpdateRequestDto updateData = AccountUpdateRequestDto.builder()
                 .name("Updated Account Name")
                 .type(Account.AccountType.SAVINGS)
                 .balance(new BigDecimal("2500.00"))
@@ -496,7 +497,7 @@ class AccountControllerIntegrationTest {
 
     @Test
     void updateAccount_WithNonExistingId_ShouldReturnBadRequest() throws Exception {
-        Account updateData = Account.builder()
+        AccountUpdateRequestDto updateData = AccountUpdateRequestDto.builder()
                 .name("Updated Account Name")
                 .type(Account.AccountType.SAVINGS)
                 .balance(new BigDecimal("2500.00"))
@@ -512,7 +513,7 @@ class AccountControllerIntegrationTest {
 
     @Test
     void updateAccount_WithoutAuthentication_ShouldReturnUnauthorized() throws Exception {
-        Account updateData = Account.builder()
+        AccountUpdateRequestDto updateData = AccountUpdateRequestDto.builder()
                 .name("Updated Account Name")
                 .type(Account.AccountType.SAVINGS)
                 .balance(new BigDecimal("2500.00"))

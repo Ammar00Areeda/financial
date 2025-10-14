@@ -37,6 +37,7 @@ import java.util.Optional;
 public class LoanService {
     
     private final LoanRepository loanRepository;
+    private final AccountService accountService;
     
     /**
      * Retrieves all loans for the authenticated user with pagination support.
@@ -64,7 +65,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public Page<Loan> getAllLoans(Pageable pageable) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        return loanRepository.findByUser(currentUser, pageable);
+        return loanRepository.findByUser(currentUser.getId(), pageable);
     }
     
     /**
@@ -75,7 +76,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public List<Loan> getAllLoans() {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        return loanRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        return loanRepository.findByUser(currentUser.getId(), Pageable.unpaged()).getContent();
     }
     
     /**
@@ -100,7 +101,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public Page<Loan> getLoansByType(Loan.LoanType loanType, Pageable pageable) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        Page<Loan> allLoans = loanRepository.findByUser(currentUser, pageable);
+        Page<Loan> allLoans = loanRepository.findByUser(currentUser.getId(), pageable);
         return allLoans; // Note: This should ideally filter by type in repository
     }
     
@@ -126,7 +127,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public Page<Loan> getLoansByStatus(Loan.LoanStatus status, Pageable pageable) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        return loanRepository.findByUser(currentUser, pageable); // Note: Should filter by status
+        return loanRepository.findByUser(currentUser.getId(), pageable); // Note: Should filter by status
     }
     
     /**
@@ -175,7 +176,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public List<Loan> searchLoansByPersonName(String personName) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        List<Loan> allLoans = loanRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        List<Loan> allLoans = loanRepository.findByUser(currentUser.getId(), Pageable.unpaged()).getContent();
         return allLoans.stream()
                 .filter(l -> l.getPersonName() != null && 
                             l.getPersonName().toLowerCase().contains(personName.toLowerCase()))
@@ -209,7 +210,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public List<Loan> getLoansByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        List<Loan> allLoans = loanRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        List<Loan> allLoans = loanRepository.findByUser(currentUser.getId(), Pageable.unpaged()).getContent();
         return allLoans.stream()
                 .filter(l -> !l.getLoanDate().isBefore(startDate) && !l.getLoanDate().isAfter(endDate))
                 .toList();
@@ -225,7 +226,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public List<Loan> getLoansByDueDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        List<Loan> allLoans = loanRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        List<Loan> allLoans = loanRepository.findByUser(currentUser.getId(), Pageable.unpaged()).getContent();
         return allLoans.stream()
                 .filter(l -> l.getDueDate() != null && 
                             !l.getDueDate().isBefore(startDate) && !l.getDueDate().isAfter(endDate))
@@ -254,7 +255,7 @@ public class LoanService {
         User currentUser = SecurityUtils.getAuthenticatedUser();
         LocalDateTime currentDate = LocalDateTime.now();
         LocalDateTime futureDate = currentDate.plusDays(daysAhead);
-        List<Loan> allLoans = loanRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        List<Loan> allLoans = loanRepository.findByUser(currentUser.getId(), Pageable.unpaged()).getContent();
         return allLoans.stream()
                 .filter(l -> l.getDueDate() != null && 
                             !l.getDueDate().isBefore(currentDate) && 
@@ -271,7 +272,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public List<Loan> getUrgentLoans() {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        List<Loan> allLoans = loanRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        List<Loan> allLoans = loanRepository.findByUser(currentUser.getId(), Pageable.unpaged()).getContent();
         return allLoans.stream()
                 .filter(l -> l.getIsUrgent() != null && l.getIsUrgent())
                 .toList();
@@ -286,7 +287,7 @@ public class LoanService {
     public List<Loan> getLoansWithRemindersDue() {
         User currentUser = SecurityUtils.getAuthenticatedUser();
         LocalDateTime now = LocalDateTime.now();
-        List<Loan> allLoans = loanRepository.findByUser(currentUser, Pageable.unpaged()).getContent();
+        List<Loan> allLoans = loanRepository.findByUser(currentUser.getId(), Pageable.unpaged()).getContent();
         return allLoans.stream()
                 .filter(l -> l.getReminderEnabled() != null && 
                             l.getReminderEnabled() && 
@@ -357,6 +358,33 @@ public class LoanService {
         
         // Set remaining amount
         loan.setRemainingAmount(loan.getTotalAmount());
+        
+        // Handle account balance updates based on loan type
+        if (loan.getAccount() != null) {
+            Long accountId = loan.getAccount().getId();
+            
+            if (loan.getLoanType() == Loan.LoanType.LENT) {
+                // If lending money, deduct the amount from the account
+                Account account = accountService.getAccountById(accountId)
+                        .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                
+                // Check if account has sufficient balance
+                if (account.getBalance().compareTo(loan.getPrincipalAmount()) < 0) {
+                    throw new IllegalArgumentException(
+                        String.format("Insufficient balance in account '%s'. Available: %s, Required: %s",
+                            account.getName(), 
+                            account.getBalance(), 
+                            loan.getPrincipalAmount())
+                    );
+                }
+                
+                // Deduct the loan amount from the account
+                accountService.subtractFromAccountBalance(accountId, loan.getPrincipalAmount());
+            } else if (loan.getLoanType() == Loan.LoanType.BORROWED) {
+                // If borrowing money, add the amount to the account
+                accountService.addToAccountBalance(accountId, loan.getPrincipalAmount());
+            }
+        }
         
         return loanRepository.save(loan);
     }
@@ -469,6 +497,28 @@ public class LoanService {
             loan.setStatus(Loan.LoanStatus.PAID_OFF);
         } else if (newPaidAmount.compareTo(BigDecimal.ZERO) > 0) {
             loan.setStatus(Loan.LoanStatus.PARTIALLY_PAID);
+        }
+        
+        // If loan type is LENT and has an associated account, add the payment back to the account
+        if (loan.getLoanType() == Loan.LoanType.LENT && loan.getAccount() != null) {
+            accountService.addToAccountBalance(loan.getAccount().getId(), paymentAmount);
+        }
+        
+        // If loan type is BORROWED and has an associated account, subtract the payment from the account
+        if (loan.getLoanType() == Loan.LoanType.BORROWED && loan.getAccount() != null) {
+            Account account = loan.getAccount();
+            
+            // Check if account has sufficient balance
+            if (account.getBalance().compareTo(paymentAmount) < 0) {
+                throw new IllegalArgumentException(
+                    String.format("Insufficient balance in account '%s'. Available: %s, Required: %s",
+                        account.getName(), 
+                        account.getBalance(), 
+                        paymentAmount)
+                );
+            }
+            
+            accountService.subtractFromAccountBalance(account.getId(), paymentAmount);
         }
         
         return loanRepository.save(loan);
@@ -679,6 +729,17 @@ public class LoanService {
                 .filter(l -> l.getStatus() == status)
                 .map(Loan::getPrincipalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+    
+    /**
+     * DEBUG METHOD - Get all loans without user filter.
+     * REMOVE THIS IN PRODUCTION - Only for debugging user-related issues.
+     *
+     * @return all loans in database
+     */
+    @Transactional(readOnly = true)
+    public List<Loan> debugGetAllLoansWithoutUserFilter() {
+        return loanRepository.findAll();
     }
     
     // ========== INNER CLASSES FOR REPORTS ==========

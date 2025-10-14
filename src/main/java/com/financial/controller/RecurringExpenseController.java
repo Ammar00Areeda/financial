@@ -1,22 +1,18 @@
 package com.financial.controller;
 
-import com.financial.dto.RecurringExpenseDto;
+import com.financial.dto.RecurringExpenseCreateRequestDto;
 import com.financial.dto.RecurringExpenseListDTO;
+import com.financial.dto.RecurringExpenseResponseDto;
+import com.financial.dto.RecurringExpenseUpdateRequestDto;
 import com.financial.entity.Account;
 import com.financial.entity.Category;
 import com.financial.entity.RecurringExpense;
-import com.financial.mapper.RecurringExpenseMapper;
 import com.financial.service.AccountService;
 import com.financial.service.CategoryService;
 import com.financial.service.RecurringExpenseService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,32 +28,24 @@ import java.util.stream.Collectors;
 
 /**
  * REST controller for RecurringExpense management operations.
+ * Implements RecurringExpenseApi interface which contains all OpenAPI documentation.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/recurring-expenses")
 @RequiredArgsConstructor
-@Tag(name = "Recurring Expenses", description = "Recurring expense management operations")
-@SecurityRequirement(name = "Bearer Authentication")
-public class RecurringExpenseController {
+public class RecurringExpenseController implements RecurringExpenseApi {
 
     private final RecurringExpenseService recurringExpenseService;
     private final AccountService accountService;
     private final CategoryService categoryService;
-    private final RecurringExpenseMapper recurringExpenseMapper;
 
-    @Operation(
-            summary = "Get all recurring expenses",
-            description = "Retrieve a list of all recurring expenses with pagination support"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved recurring expenses"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping
     public ResponseEntity<Page<RecurringExpenseListDTO>> getAllRecurringExpenses(
-            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort criteria (field,direction)") @RequestParam(defaultValue = "name,asc") String sort) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "name,asc") String sort) {
         
         String[] sortParams = sort.split(",");
         String sortField = sortParams[0];
@@ -71,19 +59,9 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseDtos);
     }
 
-    @Operation(
-            summary = "Get recurring expenses by account",
-            description = "Retrieve recurring expenses for a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved recurring expenses by account"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}")
-    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByAccount(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
-        
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByAccount(@PathVariable Long accountId) {
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -96,19 +74,9 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseDtos);
     }
 
-    @Operation(
-            summary = "Get recurring expenses by status",
-            description = "Retrieve recurring expenses filtered by status (ACTIVE, PAUSED, CANCELLED, COMPLETED)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved recurring expenses by status"),
-            @ApiResponse(responseCode = "400", description = "Invalid status"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByStatus(
-            @Parameter(description = "Status", required = true) @PathVariable String status) {
-        
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByStatus(@PathVariable String status) {
         try {
             RecurringExpense.Status expenseStatus = RecurringExpense.Status.valueOf(status.toUpperCase());
             List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesByStatus(expenseStatus);
@@ -121,19 +89,9 @@ public class RecurringExpenseController {
         }
     }
 
-    @Operation(
-            summary = "Get recurring expenses by frequency",
-            description = "Retrieve recurring expenses filtered by frequency (DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved recurring expenses by frequency"),
-            @ApiResponse(responseCode = "400", description = "Invalid frequency"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/frequency/{frequency}")
-    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByFrequency(
-            @Parameter(description = "Frequency", required = true) @PathVariable String frequency) {
-        
+    public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesByFrequency(@PathVariable String frequency) {
         try {
             RecurringExpense.Frequency expenseFrequency = RecurringExpense.Frequency.valueOf(frequency.toUpperCase());
             List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesByFrequency(expenseFrequency);
@@ -146,14 +104,7 @@ public class RecurringExpenseController {
         }
     }
 
-    @Operation(
-            summary = "Get recurring expenses due today",
-            description = "Retrieve recurring expenses that are due today"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved recurring expenses due today"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/due-today")
     public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesDueToday() {
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesDueToday();
@@ -163,14 +114,7 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseDtos);
     }
 
-    @Operation(
-            summary = "Get overdue recurring expenses",
-            description = "Retrieve recurring expenses that are overdue"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved overdue recurring expenses"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/overdue")
     public ResponseEntity<List<RecurringExpenseListDTO>> getOverdueRecurringExpenses() {
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getOverdueRecurringExpenses();
@@ -180,17 +124,10 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseDtos);
     }
 
-    @Operation(
-            summary = "Get recurring expenses due soon",
-            description = "Retrieve recurring expenses that are due within the specified number of days"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved recurring expenses due soon"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/due-soon")
     public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesDueSoon(
-            @Parameter(description = "Number of days ahead to check") @RequestParam(defaultValue = "7") int daysAhead) {
+            @RequestParam(defaultValue = "7") int daysAhead) {
         
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesDueSoon(daysAhead);
         List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
@@ -199,14 +136,7 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseDtos);
     }
 
-    @Operation(
-            summary = "Get recurring expenses with auto-pay",
-            description = "Retrieve recurring expenses that have auto-pay enabled"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved recurring expenses with auto-pay"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/auto-pay")
     public ResponseEntity<List<RecurringExpenseListDTO>> getRecurringExpensesWithAutoPay() {
         List<RecurringExpense> recurringExpenses = recurringExpenseService.getRecurringExpensesWithAutoPay();
@@ -216,18 +146,9 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseDtos);
     }
 
-    @Operation(
-            summary = "Search recurring expenses by name",
-            description = "Search recurring expenses by name containing the provided text (case-insensitive)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved matching recurring expenses"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/search/name")
-    public ResponseEntity<List<RecurringExpenseListDTO>> searchRecurringExpensesByName(
-            @Parameter(description = "Name pattern to search for") @RequestParam String name) {
-        
+    public ResponseEntity<List<RecurringExpenseListDTO>> searchRecurringExpensesByName(@RequestParam String name) {
         List<RecurringExpense> recurringExpenses = recurringExpenseService.searchRecurringExpensesByName(name);
         List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
                 .map(RecurringExpenseListDTO::fromEntity)
@@ -235,18 +156,9 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseDtos);
     }
 
-    @Operation(
-            summary = "Search recurring expenses by provider",
-            description = "Search recurring expenses by provider containing the provided text (case-insensitive)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved matching recurring expenses"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/search/provider")
-    public ResponseEntity<List<RecurringExpenseListDTO>> searchRecurringExpensesByProvider(
-            @Parameter(description = "Provider pattern to search for") @RequestParam String provider) {
-        
+    public ResponseEntity<List<RecurringExpenseListDTO>> searchRecurringExpensesByProvider(@RequestParam String provider) {
         List<RecurringExpense> recurringExpenses = recurringExpenseService.searchRecurringExpensesByProvider(provider);
         List<RecurringExpenseListDTO> recurringExpenseDtos = recurringExpenses.stream()
                 .map(RecurringExpenseListDTO::fromEntity)
@@ -254,113 +166,124 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseDtos);
     }
 
-    @Operation(
-            summary = "Get recurring expense by ID",
-            description = "Retrieve a specific recurring expense by its ID"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Recurring expense found"),
-            @ApiResponse(responseCode = "404", description = "Recurring expense not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/{id}")
-    public ResponseEntity<RecurringExpense> getRecurringExpenseById(
-            @Parameter(description = "Recurring expense ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<RecurringExpenseResponseDto> getRecurringExpenseById(@PathVariable Long id) {
         Optional<RecurringExpense> recurringExpense = recurringExpenseService.getRecurringExpenseById(id);
-        return recurringExpense.map(ResponseEntity::ok)
+        return recurringExpense.map(RecurringExpenseResponseDto::fromEntity)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(
-            summary = "Create a new recurring expense",
-            description = "Create a new recurring expense in the system"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Recurring expense created successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors"),
-            @ApiResponse(responseCode = "404", description = "Account or category not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PostMapping
-    public ResponseEntity<RecurringExpense> createRecurringExpense(@Valid @RequestBody RecurringExpense recurringExpense) {
-        // Validate account exists
-        if (recurringExpense.getAccount() != null && recurringExpense.getAccount().getId() != null) {
-            Optional<Account> account = accountService.getAccountById(recurringExpense.getAccount().getId());
+    public ResponseEntity<RecurringExpenseResponseDto> createRecurringExpense(
+            @Valid @RequestBody RecurringExpenseCreateRequestDto request) {
+        try {
+            // Validate account exists
+            Optional<Account> account = accountService.getAccountById(request.getAccountId());
             if (account.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            recurringExpense.setAccount(account.get());
-        }
-        
-        // Validate category exists if provided
-        if (recurringExpense.getCategory() != null && recurringExpense.getCategory().getId() != null) {
-            Optional<Category> category = categoryService.getCategoryById(recurringExpense.getCategory().getId());
-            if (category.isEmpty()) {
-                return ResponseEntity.notFound().build();
+            
+            RecurringExpense recurringExpense = RecurringExpense.builder()
+                    .name(request.getName())
+                    .description(request.getDescription())
+                    .amount(request.getAmount())
+                    .frequency(request.getFrequency())
+                    .account(account.get())
+                    .startDate(request.getStartDate())
+                    .endDate(request.getEndDate())
+                    .status(RecurringExpense.Status.ACTIVE)
+                    .isAutoPay(request.getIsAutoPay() != null ? request.getIsAutoPay() : false)
+                    .reminderDaysBefore(request.getReminderDaysBefore())
+                    .provider(request.getProvider())
+                    .referenceNumber(request.getReferenceNumber())
+                    .notes(request.getNotes())
+                    .build();
+            
+            // Validate category exists if provided
+            if (request.getCategoryId() != null) {
+                Optional<Category> category = categoryService.getCategoryById(request.getCategoryId());
+                if (category.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                recurringExpense.setCategory(category.get());
             }
-            recurringExpense.setCategory(category.get());
+            
+            RecurringExpense createdRecurringExpense = recurringExpenseService.createRecurringExpense(recurringExpense);
+            RecurringExpenseResponseDto response = RecurringExpenseResponseDto.fromEntity(createdRecurringExpense);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            log.error("Error creating recurring expense: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        
-        RecurringExpense createdRecurringExpense = recurringExpenseService.createRecurringExpense(recurringExpense);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdRecurringExpense);
     }
 
-    @Operation(
-            summary = "Update recurring expense",
-            description = "Update an existing recurring expense"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Recurring expense updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors"),
-            @ApiResponse(responseCode = "404", description = "Recurring expense not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PutMapping("/{id}")
-    public ResponseEntity<RecurringExpense> updateRecurringExpense(
-            @Parameter(description = "Recurring expense ID", required = true) @PathVariable Long id,
-            @Valid @RequestBody RecurringExpense recurringExpense) {
+    public ResponseEntity<RecurringExpenseResponseDto> updateRecurringExpense(
+            @PathVariable Long id,
+            @Valid @RequestBody RecurringExpenseUpdateRequestDto request) {
         
-        if (!recurringExpenseService.getRecurringExpenseById(id).isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        // Validate account exists if provided
-        if (recurringExpense.getAccount() != null && recurringExpense.getAccount().getId() != null) {
-            Optional<Account> account = accountService.getAccountById(recurringExpense.getAccount().getId());
+        try {
+            Optional<RecurringExpense> existingExpenseOpt = recurringExpenseService.getRecurringExpenseById(id);
+            if (existingExpenseOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            RecurringExpense existingExpense = existingExpenseOpt.get();
+            
+            // Update fields from request DTO
+            existingExpense.setName(request.getName());
+            existingExpense.setDescription(request.getDescription());
+            existingExpense.setAmount(request.getAmount());
+            existingExpense.setFrequency(request.getFrequency());
+            if (request.getStartDate() != null) {
+                existingExpense.setStartDate(request.getStartDate());
+            }
+            existingExpense.setEndDate(request.getEndDate());
+            if (request.getStatus() != null) {
+                existingExpense.setStatus(request.getStatus());
+            }
+            if (request.getIsAutoPay() != null) {
+                existingExpense.setIsAutoPay(request.getIsAutoPay());
+            }
+            existingExpense.setReminderDaysBefore(request.getReminderDaysBefore());
+            existingExpense.setProvider(request.getProvider());
+            existingExpense.setReferenceNumber(request.getReferenceNumber());
+            existingExpense.setNotes(request.getNotes());
+            
+            // Validate account exists
+            Optional<Account> account = accountService.getAccountById(request.getAccountId());
             if (account.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            recurringExpense.setAccount(account.get());
-        }
-        
-        // Validate category exists if provided
-        if (recurringExpense.getCategory() != null && recurringExpense.getCategory().getId() != null) {
-            Optional<Category> category = categoryService.getCategoryById(recurringExpense.getCategory().getId());
-            if (category.isEmpty()) {
-                return ResponseEntity.notFound().build();
+            existingExpense.setAccount(account.get());
+            
+            // Validate category exists if provided
+            if (request.getCategoryId() != null) {
+                Optional<Category> category = categoryService.getCategoryById(request.getCategoryId());
+                if (category.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                existingExpense.setCategory(category.get());
+            } else {
+                existingExpense.setCategory(null);
             }
-            recurringExpense.setCategory(category.get());
+            
+            RecurringExpense updatedRecurringExpense = recurringExpenseService.updateRecurringExpense(existingExpense);
+            RecurringExpenseResponseDto response = RecurringExpenseResponseDto.fromEntity(updatedRecurringExpense);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error updating recurring expense: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        
-        recurringExpense.setId(id);
-        RecurringExpense updatedRecurringExpense = recurringExpenseService.updateRecurringExpense(recurringExpense);
-        return ResponseEntity.ok(updatedRecurringExpense);
     }
 
-    @Operation(
-            summary = "Delete recurring expense",
-            description = "Delete a recurring expense from the system"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Recurring expense deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Recurring expense not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRecurringExpense(
-            @Parameter(description = "Recurring expense ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<Void> deleteRecurringExpense(@PathVariable Long id) {
         try {
             recurringExpenseService.deleteRecurringExpense(id);
             return ResponseEntity.noContent().build();
@@ -371,85 +294,49 @@ public class RecurringExpenseController {
 
     // ========== ACTION ENDPOINTS ==========
 
-    @Operation(
-            summary = "Mark recurring expense as paid",
-            description = "Mark a recurring expense as paid and create a transaction record"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Recurring expense marked as paid successfully"),
-            @ApiResponse(responseCode = "404", description = "Recurring expense not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PostMapping("/{id}/mark-paid")
-    public ResponseEntity<RecurringExpense> markAsPaid(
-            @Parameter(description = "Recurring expense ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<RecurringExpenseResponseDto> markAsPaid(@PathVariable Long id) {
         try {
             RecurringExpense recurringExpense = recurringExpenseService.markAsPaid(id);
-            return ResponseEntity.ok(recurringExpense);
+            RecurringExpenseResponseDto response = RecurringExpenseResponseDto.fromEntity(recurringExpense);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    @Operation(
-            summary = "Pause recurring expense",
-            description = "Pause a recurring expense"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Recurring expense paused successfully"),
-            @ApiResponse(responseCode = "404", description = "Recurring expense not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PatchMapping("/{id}/pause")
-    public ResponseEntity<RecurringExpense> pauseRecurringExpense(
-            @Parameter(description = "Recurring expense ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<RecurringExpenseResponseDto> pauseRecurringExpense(@PathVariable Long id) {
         try {
             RecurringExpense recurringExpense = recurringExpenseService.pauseRecurringExpense(id);
-            return ResponseEntity.ok(recurringExpense);
+            RecurringExpenseResponseDto response = RecurringExpenseResponseDto.fromEntity(recurringExpense);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    @Operation(
-            summary = "Resume recurring expense",
-            description = "Resume a paused recurring expense"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Recurring expense resumed successfully"),
-            @ApiResponse(responseCode = "404", description = "Recurring expense not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PatchMapping("/{id}/resume")
-    public ResponseEntity<RecurringExpense> resumeRecurringExpense(
-            @Parameter(description = "Recurring expense ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<RecurringExpenseResponseDto> resumeRecurringExpense(@PathVariable Long id) {
         try {
             RecurringExpense recurringExpense = recurringExpenseService.resumeRecurringExpense(id);
-            return ResponseEntity.ok(recurringExpense);
+            RecurringExpenseResponseDto response = RecurringExpenseResponseDto.fromEntity(recurringExpense);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    @Operation(
-            summary = "Cancel recurring expense",
-            description = "Cancel a recurring expense"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Recurring expense cancelled successfully"),
-            @ApiResponse(responseCode = "404", description = "Recurring expense not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PatchMapping("/{id}/cancel")
-    public ResponseEntity<RecurringExpense> cancelRecurringExpense(
-            @Parameter(description = "Recurring expense ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<RecurringExpenseResponseDto> cancelRecurringExpense(@PathVariable Long id) {
         try {
             RecurringExpense recurringExpense = recurringExpenseService.cancelRecurringExpense(id);
-            return ResponseEntity.ok(recurringExpense);
+            RecurringExpenseResponseDto response = RecurringExpenseResponseDto.fromEntity(recurringExpense);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
@@ -457,19 +344,9 @@ public class RecurringExpenseController {
 
     // ========== REPORTING ENDPOINTS ==========
 
-    @Operation(
-            summary = "Get total monthly recurring expenses for account",
-            description = "Calculate total monthly recurring expenses for a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully calculated total monthly recurring expenses"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}/total-monthly")
-    public ResponseEntity<BigDecimal> getTotalMonthlyRecurringExpenses(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
-        
+    public ResponseEntity<BigDecimal> getTotalMonthlyRecurringExpenses(@PathVariable Long accountId) {
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -479,19 +356,9 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(total);
     }
 
-    @Operation(
-            summary = "Get total recurring expenses for account",
-            description = "Calculate total recurring expenses for a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully calculated total recurring expenses"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}/total")
-    public ResponseEntity<BigDecimal> getTotalRecurringExpenses(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
-        
+    public ResponseEntity<BigDecimal> getTotalRecurringExpenses(@PathVariable Long accountId) {
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -501,14 +368,7 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(total);
     }
 
-    @Operation(
-            summary = "Process all due recurring expenses",
-            description = "Process all recurring expenses that are due today (for scheduled jobs)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully processed due recurring expenses"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PostMapping("/process-due")
     public ResponseEntity<Integer> processAllDueRecurringExpenses() {
         int processedCount = recurringExpenseService.processAllDueRecurringExpenses();

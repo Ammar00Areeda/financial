@@ -36,6 +36,9 @@ class LoanServiceTest {
     @Mock
     private LoanRepository loanRepository;
 
+    @Mock
+    private AccountService accountService;
+
     @InjectMocks
     private LoanService loanService;
 
@@ -97,7 +100,7 @@ class LoanServiceTest {
 
         try (MockedStatic<SecurityUtils> mockedSecurity = mockStatic(SecurityUtils.class)) {
             mockedSecurity.when(SecurityUtils::getAuthenticatedUser).thenReturn(testUser);
-            when(loanRepository.findByUser(testUser, pageable)).thenReturn(loanPage);
+            when(loanRepository.findByUser(testUser.getId(), pageable)).thenReturn(loanPage);
 
             // Act
             Page<Loan> result = loanService.getAllLoans(pageable);
@@ -106,7 +109,7 @@ class LoanServiceTest {
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
             assertEquals(testLoan.getId(), result.getContent().get(0).getId());
-            verify(loanRepository).findByUser(testUser, pageable);
+            verify(loanRepository).findByUser(testUser.getId(), pageable);
         }
     }
 
@@ -117,7 +120,7 @@ class LoanServiceTest {
 
         try (MockedStatic<SecurityUtils> mockedSecurity = mockStatic(SecurityUtils.class)) {
             mockedSecurity.when(SecurityUtils::getAuthenticatedUser).thenReturn(testUser);
-            when(loanRepository.findByUser(testUser, Pageable.unpaged())).thenReturn(loanPage);
+            when(loanRepository.findByUser(testUser.getId(), Pageable.unpaged())).thenReturn(loanPage);
 
             // Act
             List<Loan> result = loanService.getAllLoans();
@@ -126,7 +129,7 @@ class LoanServiceTest {
             assertNotNull(result);
             assertEquals(1, result.size());
             assertEquals(testLoan.getId(), result.get(0).getId());
-            verify(loanRepository).findByUser(testUser, Pageable.unpaged());
+            verify(loanRepository).findByUser(testUser.getId(), Pageable.unpaged());
         }
     }
 
@@ -264,7 +267,7 @@ class LoanServiceTest {
 
         try (MockedStatic<SecurityUtils> mockedSecurity = mockStatic(SecurityUtils.class)) {
             mockedSecurity.when(SecurityUtils::getAuthenticatedUser).thenReturn(testUser);
-            when(loanRepository.findByUser(testUser, Pageable.unpaged())).thenReturn(loanPage);
+            when(loanRepository.findByUser(testUser.getId(), Pageable.unpaged())).thenReturn(loanPage);
 
             // Act
             List<Loan> result = loanService.searchLoansByPersonName("John");
@@ -273,7 +276,7 @@ class LoanServiceTest {
             assertNotNull(result);
             assertEquals(1, result.size());
             assertTrue(result.get(0).getPersonName().toLowerCase().contains("john"));
-            verify(loanRepository).findByUser(testUser, Pageable.unpaged());
+            verify(loanRepository).findByUser(testUser.getId(), Pageable.unpaged());
         }
     }
 
@@ -317,7 +320,7 @@ class LoanServiceTest {
 
         try (MockedStatic<SecurityUtils> mockedSecurity = mockStatic(SecurityUtils.class)) {
             mockedSecurity.when(SecurityUtils::getAuthenticatedUser).thenReturn(testUser);
-            when(loanRepository.findByUser(testUser, Pageable.unpaged())).thenReturn(loanPage);
+            when(loanRepository.findByUser(testUser.getId(), Pageable.unpaged())).thenReturn(loanPage);
 
             // Act
             List<Loan> result = loanService.getUrgentLoans();
@@ -326,7 +329,7 @@ class LoanServiceTest {
             assertNotNull(result);
             assertEquals(1, result.size());
             assertTrue(result.get(0).getIsUrgent());
-            verify(loanRepository).findByUser(testUser, Pageable.unpaged());
+            verify(loanRepository).findByUser(testUser.getId(), Pageable.unpaged());
         }
     }
 
@@ -339,11 +342,13 @@ class LoanServiceTest {
                 .principalAmount(new BigDecimal("2000.00"))
                 .interestRate(new BigDecimal("3.00"))
                 .loanDate(LocalDateTime.now())
+                .account(testAccount)
                 .build();
 
         try (MockedStatic<SecurityUtils> mockedSecurity = mockStatic(SecurityUtils.class)) {
             mockedSecurity.when(SecurityUtils::getAuthenticatedUser).thenReturn(testUser);
             when(loanRepository.save(any(Loan.class))).thenReturn(newLoan);
+            when(accountService.addToAccountBalance(any(Long.class), any(BigDecimal.class))).thenReturn(testAccount);
 
             // Act
             Loan result = loanService.createLoan(newLoan);
@@ -355,6 +360,7 @@ class LoanServiceTest {
             assertNotNull(newLoan.getTotalAmount());
             assertNotNull(newLoan.getRemainingAmount());
             verify(loanRepository).save(newLoan);
+            verify(accountService).addToAccountBalance(testAccount.getId(), newLoan.getPrincipalAmount());
         }
     }
 
@@ -366,10 +372,13 @@ class LoanServiceTest {
                 .loanType(Loan.LoanType.LENT)
                 .principalAmount(new BigDecimal("1000.00"))
                 .loanDate(LocalDateTime.now())
+                .account(testAccount)
                 .build();
 
         try (MockedStatic<SecurityUtils> mockedSecurity = mockStatic(SecurityUtils.class)) {
             mockedSecurity.when(SecurityUtils::getAuthenticatedUser).thenReturn(testUser);
+            when(accountService.getAccountById(testAccount.getId())).thenReturn(Optional.of(testAccount));
+            when(accountService.subtractFromAccountBalance(any(Long.class), any(BigDecimal.class))).thenReturn(testAccount);
             when(loanRepository.save(any(Loan.class))).thenReturn(newLoan);
 
             // Act
@@ -380,6 +389,8 @@ class LoanServiceTest {
             assertEquals(newLoan.getPrincipalAmount(), newLoan.getTotalAmount());
             assertEquals(newLoan.getTotalAmount(), newLoan.getRemainingAmount());
             verify(loanRepository).save(newLoan);
+            verify(accountService).getAccountById(testAccount.getId());
+            verify(accountService).subtractFromAccountBalance(testAccount.getId(), newLoan.getPrincipalAmount());
         }
     }
 
@@ -484,6 +495,7 @@ class LoanServiceTest {
             mockedSecurity.when(SecurityUtils::getAuthenticatedUser).thenReturn(testUser);
             when(loanRepository.findByIdAndUser(1L, testUser)).thenReturn(Optional.of(testLoan));
             when(loanRepository.save(any(Loan.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(accountService.addToAccountBalance(any(Long.class), any(BigDecimal.class))).thenReturn(testAccount);
 
             // Act
             Loan result = loanService.recordPayment(1L, paymentAmount);
@@ -496,6 +508,7 @@ class LoanServiceTest {
             assertNotNull(result.getLastPaymentDate());
             verify(loanRepository).findByIdAndUser(1L, testUser);
             verify(loanRepository).save(testLoan);
+            verify(accountService).addToAccountBalance(testAccount.getId(), paymentAmount);
         }
     }
 
@@ -508,6 +521,7 @@ class LoanServiceTest {
             mockedSecurity.when(SecurityUtils::getAuthenticatedUser).thenReturn(testUser);
             when(loanRepository.findByIdAndUser(1L, testUser)).thenReturn(Optional.of(testLoan));
             when(loanRepository.save(any(Loan.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(accountService.addToAccountBalance(any(Long.class), any(BigDecimal.class))).thenReturn(testAccount);
 
             // Act
             Loan result = loanService.recordPayment(1L, paymentAmount);
@@ -518,6 +532,7 @@ class LoanServiceTest {
             assertEquals(0, result.getRemainingAmount().compareTo(BigDecimal.ZERO));
             assertEquals(Loan.LoanStatus.PAID_OFF, result.getStatus());
             verify(loanRepository).save(testLoan);
+            verify(accountService).addToAccountBalance(testAccount.getId(), paymentAmount);
         }
     }
 

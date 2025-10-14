@@ -44,7 +44,8 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
      * @return page of user's loans
      */
     @EntityGraph(attributePaths = {"account"})
-    Page<Loan> findByUser(User user, Pageable pageable);
+    @Query("SELECT l FROM Loan l WHERE l.user.id = :userId")
+    Page<Loan> findByUser(@Param("userId") Long userId, Pageable pageable);
     
     /**
      * Find loans by user and type.

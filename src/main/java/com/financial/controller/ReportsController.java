@@ -3,14 +3,7 @@ package com.financial.controller;
 import com.financial.dto.ReportsDto;
 import com.financial.entity.Transaction;
 import com.financial.service.TransactionService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,29 +19,20 @@ import java.util.List;
 
 /**
  * REST controller for Reports operations.
+ * Implements ReportsApi interface which contains all OpenAPI documentation.
  */
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
-@Tag(name = "Reports", description = "Financial reports and analytics operations")
-@SecurityRequirement(name = "Bearer Authentication")
-public class ReportsController {
+public class ReportsController implements ReportsApi {
 
     private final TransactionService transactionService;
 
-    @Operation(
-            summary = "Get monthly reports",
-            description = "Retrieve monthly financial reports for the specified date range"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved monthly reports"),
-            @ApiResponse(responseCode = "400", description = "Invalid date range"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/monthly")
     public ResponseEntity<ReportsDto> getMonthlyReports(
-            @Parameter(description = "Start date in YYYY-MM format") @RequestParam String start,
-            @Parameter(description = "End date in YYYY-MM format") @RequestParam String end) {
+            @RequestParam String start,
+            @RequestParam String end) {
         
         // Parse date range
         LocalDate startDate = LocalDate.parse(start + "-01", DateTimeFormatter.ofPattern("yyyy-MM-dd"));

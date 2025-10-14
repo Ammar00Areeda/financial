@@ -1,18 +1,15 @@
 package com.financial.controller;
 
+import com.financial.dto.LoanCreateRequestDto;
 import com.financial.dto.LoanDto;
 import com.financial.dto.LoanListDTO;
+import com.financial.dto.LoanResponseDto;
+import com.financial.dto.LoanUpdateRequestDto;
 import com.financial.entity.Account;
 import com.financial.entity.Loan;
 import com.financial.mapper.LoanMapper;
 import com.financial.service.AccountService;
 import com.financial.service.LoanService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,13 +29,12 @@ import java.util.stream.Collectors;
 
 /**
  * REST controller for Loan management operations and reporting.
+ * Implements LoanApi interface which contains all OpenAPI documentation.
  */
 @RestController
 @RequestMapping("/api/loans")
 @RequiredArgsConstructor
-@Tag(name = "Loans", description = "Loan management and reporting operations")
-@SecurityRequirement(name = "Bearer Authentication")
-public class LoanController {
+public class LoanController implements LoanApi {
 
     private final LoanService loanService;
     private final AccountService accountService;
@@ -46,19 +42,12 @@ public class LoanController {
 
     // ========== BASIC CRUD OPERATIONS ==========
 
-    @Operation(
-            summary = "Get all loans",
-            description = "Retrieve a list of all loans with pagination support"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved loans"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping
     public ResponseEntity<Page<LoanListDTO>> getAllLoans(
-            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort criteria (field,direction)") @RequestParam(defaultValue = "loanDate,desc") String sort) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "loanDate,desc") String sort) {
         
         String[] sortParams = sort.split(",");
         String sortField = sortParams[0];
@@ -72,18 +61,9 @@ public class LoanController {
         return ResponseEntity.ok(loanDtos);
     }
 
-    @Operation(
-            summary = "Get loans by type",
-            description = "Retrieve loans filtered by type (LENT or BORROWED)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved loans by type"),
-            @ApiResponse(responseCode = "400", description = "Invalid loan type"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<LoanListDTO>> getLoansByType(
-            @Parameter(description = "Loan type (LENT or BORROWED)", required = true) @PathVariable String type) {
+    public ResponseEntity<List<LoanListDTO>> getLoansByType(@PathVariable String type) {
         
         try {
             Loan.LoanType loanType = Loan.LoanType.valueOf(type.toUpperCase());
@@ -97,18 +77,9 @@ public class LoanController {
         }
     }
 
-    @Operation(
-            summary = "Get loans by status",
-            description = "Retrieve loans filtered by status (ACTIVE, PAID_OFF, OVERDUE, etc.)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved loans by status"),
-            @ApiResponse(responseCode = "400", description = "Invalid loan status"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<LoanListDTO>> getLoansByStatus(
-            @Parameter(description = "Loan status", required = true) @PathVariable String status) {
+    public ResponseEntity<List<LoanListDTO>> getLoansByStatus(@PathVariable String status) {
         
         try {
             Loan.LoanStatus loanStatus = Loan.LoanStatus.valueOf(status.toUpperCase());
@@ -122,18 +93,9 @@ public class LoanController {
         }
     }
 
-    @Operation(
-            summary = "Get loans by account",
-            description = "Retrieve loans for a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved loans by account"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/account/{accountId}")
-    public ResponseEntity<List<LoanListDTO>> getLoansByAccount(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long accountId) {
+    public ResponseEntity<List<LoanListDTO>> getLoansByAccount(@PathVariable Long accountId) {
         
         Optional<Account> account = accountService.getAccountById(accountId);
         if (account.isEmpty()) {
@@ -147,17 +109,9 @@ public class LoanController {
         return ResponseEntity.ok(loanDtos);
     }
 
-    @Operation(
-            summary = "Search loans by person name",
-            description = "Search loans by person name containing the provided text (case-insensitive)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved matching loans"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/search")
-    public ResponseEntity<List<LoanListDTO>> searchLoansByPersonName(
-            @Parameter(description = "Person name pattern to search for") @RequestParam String personName) {
+    public ResponseEntity<List<LoanListDTO>> searchLoansByPersonName(@RequestParam String personName) {
         
         List<Loan> loans = loanService.searchLoansByPersonName(personName);
         List<LoanListDTO> loanDtos = loans.stream()
@@ -166,66 +120,81 @@ public class LoanController {
         return ResponseEntity.ok(loanDtos);
     }
 
-    @Operation(
-            summary = "Get loan by ID",
-            description = "Retrieve a specific loan by its ID"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Loan found"),
-            @ApiResponse(responseCode = "404", description = "Loan not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
+    @GetMapping("/summary")
+    public ResponseEntity<LoanService.LoanSummaryReport> getLoanSummary() {
+        LoanService.LoanSummaryReport report = loanService.getLoanSummaryReport();
+        return ResponseEntity.ok(report);
+    }
+
+    @Override
     @GetMapping("/{id}")
-    public ResponseEntity<LoanDto> getLoanById(
-            @Parameter(description = "Loan ID", required = true) @PathVariable Long id) {
+    public ResponseEntity<LoanDto> getLoanById(@PathVariable Long id) {
         
         Optional<Loan> loan = loanService.getLoanById(id);
         return loan.map(loanMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+    
+    /**
+     * Get loan by ID (returns detailed response DTO).
+     *
+     * @param id the loan ID
+     * @return ResponseEntity containing the loan response DTO
+     */
+    @GetMapping("/{id}/details")
+    public ResponseEntity<LoanResponseDto> getLoanDetailsById(@PathVariable Long id) {
+        
+        Optional<Loan> loan = loanService.getLoanById(id);
+        return loan.map(loanMapper::toResponseDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
-    @Operation(
-            summary = "Create a new loan",
-            description = "Create a new loan in the system"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Loan created successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PostMapping
     public ResponseEntity<LoanDto> createLoan(@Valid @RequestBody LoanDto loanDto) {
         Loan loan = loanMapper.toEntity(loanDto);
         
-        // Validate account exists if provided
-        if (loanDto.getAccountId() != null) {
-            Optional<Account> account = accountService.getAccountById(loanDto.getAccountId());
-            if (account.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            loan.setAccount(account.get());
+        // Validate account exists (accountId is now mandatory)
+        Optional<Account> account = accountService.getAccountById(loanDto.getAccountId());
+        if (account.isEmpty()) {
+            return ResponseEntity.notFound().build();
         }
+        loan.setAccount(account.get());
         
         Loan createdLoan = loanService.createLoan(loan);
         LoanDto createdLoanDto = loanMapper.toDto(createdLoan);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdLoanDto);
     }
+    
+    /**
+     * Create a new loan (using request DTO).
+     *
+     * @param requestDto the loan creation request
+     * @return ResponseEntity containing the created loan response DTO
+     */
+    @PostMapping("/v2")
+    public ResponseEntity<LoanResponseDto> createLoanV2(@Valid @RequestBody LoanCreateRequestDto requestDto) {
+        Loan loan = loanMapper.toEntityFromCreateRequest(requestDto);
+        
+        // Validate account exists (accountId is now mandatory)
+        Optional<Account> account = accountService.getAccountById(requestDto.getAccountId());
+        if (account.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        loan.setAccount(account.get());
+        
+        Loan createdLoan = loanService.createLoan(loan);
+        LoanResponseDto responseDto = loanMapper.toResponseDto(createdLoan);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    }
 
-    @Operation(
-            summary = "Update loan",
-            description = "Update an existing loan"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Loan updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors"),
-            @ApiResponse(responseCode = "404", description = "Loan not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<LoanDto> updateLoan(
-            @Parameter(description = "Loan ID", required = true) @PathVariable Long id,
+            @PathVariable Long id,
             @Valid @RequestBody LoanDto loanDto) {
         
         if (!loanService.getLoanById(id).isPresent()) {
@@ -248,19 +217,47 @@ public class LoanController {
         LoanDto updatedLoanDto = loanMapper.toDto(updatedLoan);
         return ResponseEntity.ok(updatedLoanDto);
     }
+    
+    /**
+     * Update an existing loan (using request DTO).
+     *
+     * @param id the loan ID
+     * @param requestDto the loan update request
+     * @return ResponseEntity containing the updated loan response DTO
+     */
+    @PutMapping("/{id}/v2")
+    public ResponseEntity<LoanResponseDto> updateLoanV2(
+            @PathVariable Long id,
+            @Valid @RequestBody LoanUpdateRequestDto requestDto) {
+        
+        Optional<Loan> existingLoanOpt = loanService.getLoanById(id);
+        if (existingLoanOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        Loan existingLoan = existingLoanOpt.get();
+        
+        // Update entity from request DTO
+        loanMapper.updateEntityFromUpdateRequest(existingLoan, requestDto);
+        existingLoan.setId(id);
+        
+        // Validate account exists if provided
+        if (requestDto.getAccountId() != null) {
+            Optional<Account> account = accountService.getAccountById(requestDto.getAccountId());
+            if (account.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            existingLoan.setAccount(account.get());
+        }
+        
+        Loan updatedLoan = loanService.updateLoan(existingLoan);
+        LoanResponseDto responseDto = loanMapper.toResponseDto(updatedLoan);
+        return ResponseEntity.ok(responseDto);
+    }
 
-    @Operation(
-            summary = "Delete loan",
-            description = "Delete a loan from the system"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Loan deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Loan not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteLoan(
-            @Parameter(description = "Loan ID", required = true) @PathVariable Long id) {
+    public ResponseEntity<Void> deleteLoan(@PathVariable Long id) {
         
         try {
             loanService.deleteLoan(id);
@@ -272,19 +269,11 @@ public class LoanController {
 
     // ========== LOAN ACTIONS ==========
 
-    @Operation(
-            summary = "Record payment for loan",
-            description = "Record a payment made for a specific loan"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Payment recorded successfully"),
-            @ApiResponse(responseCode = "404", description = "Loan not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PostMapping("/{id}/payment")
     public ResponseEntity<Loan> recordPayment(
-            @Parameter(description = "Loan ID", required = true) @PathVariable Long id,
-            @Parameter(description = "Payment amount") @RequestParam BigDecimal paymentAmount) {
+            @PathVariable Long id,
+            @RequestParam BigDecimal paymentAmount) {
         
         try {
             Loan loan = loanService.recordPayment(id, paymentAmount);
@@ -294,18 +283,9 @@ public class LoanController {
         }
     }
 
-    @Operation(
-            summary = "Mark loan as urgent",
-            description = "Mark a loan as urgent"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Loan marked as urgent successfully"),
-            @ApiResponse(responseCode = "404", description = "Loan not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PatchMapping("/{id}/urgent")
-    public ResponseEntity<Loan> markAsUrgent(
-            @Parameter(description = "Loan ID", required = true) @PathVariable Long id) {
+    public ResponseEntity<Loan> markAsUrgent(@PathVariable Long id) {
         
         try {
             Loan loan = loanService.markAsUrgent(id);
@@ -315,18 +295,9 @@ public class LoanController {
         }
     }
 
-    @Operation(
-            summary = "Mark loan as not urgent",
-            description = "Mark a loan as not urgent"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Loan marked as not urgent successfully"),
-            @ApiResponse(responseCode = "404", description = "Loan not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PatchMapping("/{id}/not-urgent")
-    public ResponseEntity<Loan> markAsNotUrgent(
-            @Parameter(description = "Loan ID", required = true) @PathVariable Long id) {
+    public ResponseEntity<Loan> markAsNotUrgent(@PathVariable Long id) {
         
         try {
             Loan loan = loanService.markAsNotUrgent(id);
@@ -338,28 +309,14 @@ public class LoanController {
 
     // ========== REPORTING ENDPOINTS ==========
 
-    @Operation(
-            summary = "Get loan summary report",
-            description = "Get a comprehensive summary report of all loans including totals and counts"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved loan summary report"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/summary")
     public ResponseEntity<LoanService.LoanSummaryReport> getLoanSummaryReport() {
         LoanService.LoanSummaryReport report = loanService.getLoanSummaryReport();
         return ResponseEntity.ok(report);
     }
 
-    @Operation(
-            summary = "Get overdue loans report",
-            description = "Get a list of all overdue loans"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved overdue loans report"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/overdue")
     public ResponseEntity<List<LoanListDTO>> getOverdueLoansReport() {
         List<Loan> overdueLoans = loanService.getOverdueLoansReport();
@@ -369,17 +326,9 @@ public class LoanController {
         return ResponseEntity.ok(loanDtos);
     }
 
-    @Operation(
-            summary = "Get loans due soon report",
-            description = "Get a list of loans due within the specified number of days"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved loans due soon report"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/due-soon")
-    public ResponseEntity<List<LoanListDTO>> getLoansDueSoonReport(
-            @Parameter(description = "Number of days ahead to check") @RequestParam(defaultValue = "7") int daysAhead) {
+    public ResponseEntity<List<LoanListDTO>> getLoansDueSoonReport(@RequestParam(defaultValue = "7") int daysAhead) {
         
         List<Loan> loansDueSoon = loanService.getLoansDueSoonReport(daysAhead);
         List<LoanListDTO> loanDtos = loansDueSoon.stream()
@@ -388,14 +337,7 @@ public class LoanController {
         return ResponseEntity.ok(loanDtos);
     }
 
-    @Operation(
-            summary = "Get urgent loans report",
-            description = "Get a list of all urgent loans"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved urgent loans report"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/urgent")
     public ResponseEntity<List<LoanListDTO>> getUrgentLoansReport() {
         List<Loan> urgentLoans = loanService.getUrgentLoans();
@@ -405,60 +347,32 @@ public class LoanController {
         return ResponseEntity.ok(loanDtos);
     }
 
-    @Operation(
-            summary = "Get total amount lent",
-            description = "Get the total amount of money lent to others"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved total amount lent"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/total-lent")
     public ResponseEntity<BigDecimal> getTotalAmountLent() {
         BigDecimal totalLent = loanService.getTotalAmountLent();
         return ResponseEntity.ok(totalLent);
     }
 
-    @Operation(
-            summary = "Get total amount borrowed",
-            description = "Get the total amount of money borrowed from others"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved total amount borrowed"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/total-borrowed")
     public ResponseEntity<BigDecimal> getTotalAmountBorrowed() {
         BigDecimal totalBorrowed = loanService.getTotalAmountBorrowed();
         return ResponseEntity.ok(totalBorrowed);
     }
 
-    @Operation(
-            summary = "Get net loan position",
-            description = "Get the net loan position (total lent - total borrowed)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved net loan position"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/net-position")
     public ResponseEntity<BigDecimal> getNetLoanPosition() {
         BigDecimal netPosition = loanService.getNetLoanPosition();
         return ResponseEntity.ok(netPosition);
     }
 
-    @Operation(
-            summary = "Get loans by date range",
-            description = "Get loans within a specific date range"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved loans by date range"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/date-range")
     public ResponseEntity<List<LoanListDTO>> getLoansByDateRange(
-            @Parameter(description = "Start date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @Parameter(description = "End date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
         List<Loan> loans = loanService.getLoansByDateRange(startDate, endDate);
         List<LoanListDTO> loanDtos = loans.stream()
@@ -467,23 +381,38 @@ public class LoanController {
         return ResponseEntity.ok(loanDtos);
     }
 
-    @Operation(
-            summary = "Get loans by due date range",
-            description = "Get loans with due dates within a specific range"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved loans by due date range"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/reports/due-date-range")
     public ResponseEntity<List<LoanListDTO>> getLoansByDueDateRange(
-            @Parameter(description = "Start date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @Parameter(description = "End date (yyyy-MM-ddTHH:mm:ss)") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         
         List<Loan> loans = loanService.getLoansByDueDateRange(startDate, endDate);
         List<LoanListDTO> loanDtos = loans.stream()
                 .map(LoanListDTO::fromEntity)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(loanDtos);
+    }
+
+    // DEBUG ENDPOINT - Remove in production
+    @GetMapping("/debug/all")
+    public ResponseEntity<String> debugAllLoans() {
+        com.financial.entity.User currentUser = com.financial.security.SecurityUtils.getAuthenticatedUser();
+        List<Loan> allLoans = loanService.debugGetAllLoansWithoutUserFilter();
+        
+        StringBuilder debug = new StringBuilder();
+        debug.append("Current authenticated user: ").append(currentUser.getUsername())
+             .append(" (ID: ").append(currentUser.getId()).append(")\n\n");
+        debug.append("All loans in database:\n");
+        
+        for (Loan loan : allLoans) {
+            debug.append("Loan ID: ").append(loan.getId())
+                 .append(", Person: ").append(loan.getPersonName())
+                 .append(", User ID: ").append(loan.getUser() != null ? loan.getUser().getId() : "NULL")
+                 .append(", User: ").append(loan.getUser() != null ? loan.getUser().getUsername() : "NULL")
+                 .append("\n");
+        }
+        
+        return ResponseEntity.ok(debug.toString());
     }
 }

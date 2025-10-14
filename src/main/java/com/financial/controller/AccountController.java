@@ -1,30 +1,15 @@
 package com.financial.controller;
 
+import com.financial.dto.AccountCreateRequestDto;
 import com.financial.dto.AccountDto;
 import com.financial.dto.AccountListDTO;
-import com.financial.dto.AccountResponseDto;
+import com.financial.dto.AccountUpdateRequestDto;
 import com.financial.entity.Account;
 import com.financial.mapper.AccountMapper;
 import com.financial.service.AccountService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,110 +20,29 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Request DTO for creating accounts.
- */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-class CreateAccountRequest {
-    @NotBlank(message = "Account name is required")
-    private String name;
-    
-    @NotBlank(message = "Account type is required")
-    private String type;
-    
-    @NotNull(message = "Initial balance is required")
-    private BigDecimal initialBalance;
-    
-    @NotBlank(message = "Currency is required")
-    private String currency;
-}
-
-/**
  * REST controller for Account management operations.
+ * Implements AccountApi interface which contains all OpenAPI documentation.
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor
-@Tag(name = "Accounts", description = "Account management operations")
-@SecurityRequirement(name = "Bearer Authentication")
-public class AccountController {
+public class AccountController implements AccountApi {
 
     private final AccountService accountService;
     private final AccountMapper accountMapper;
 
-    @Operation(
-            summary = "Get all accounts",
-            description = "Retrieve a list of all accounts"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved accounts"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping
     public ResponseEntity<List<AccountListDTO>> getAllAccounts() {
-        
         List<Account> accounts = accountService.getAllAccounts();
-        
         List<AccountListDTO> accountDtos = accounts.stream()
                 .map(AccountListDTO::fromEntity)
                 .collect(Collectors.toList());
-        
         return ResponseEntity.ok(accountDtos);
     }
 
-    @Operation(
-            summary = "Create a new account",
-            description = "Create a new account with initial balance"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Account created successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping
-    public ResponseEntity<AccountResponseDto.AccountDto> createAccount(
-            @Parameter(description = "Account creation request") @Valid @RequestBody CreateAccountRequest request) {
-        
-        try {
-            Account account = Account.builder()
-                    .name(request.getName())
-                    .type(Account.AccountType.valueOf(request.getType().toUpperCase()))
-                    .balance(request.getInitialBalance())
-                    .currency(request.getCurrency())
-                    .status(Account.AccountStatus.ACTIVE)
-                    .includeInBalance(true)
-                    .build();
-            
-            Account createdAccount = accountService.createAccount(account);
-            
-            AccountResponseDto.AccountDto response = AccountResponseDto.AccountDto.builder()
-                    .id(createdAccount.getId().toString())
-                    .name(createdAccount.getName())
-                    .type(createdAccount.getType().toString().toLowerCase())
-                    .balance(createdAccount.getBalance())
-                    .currency(createdAccount.getCurrency())
-                    .institution(createdAccount.getBankName())
-                    .createdAt(createdAccount.getCreatedAt())
-                    .updatedAt(createdAccount.getUpdatedAt())
-                    .build();
-            
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    @Operation(
-            summary = "Get all active accounts",
-            description = "Retrieve a list of all active accounts"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved active accounts"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/active")
     public ResponseEntity<List<AccountListDTO>> getAllActiveAccounts() {
         List<Account> accounts = accountService.getAllActiveAccounts();
@@ -148,19 +52,9 @@ public class AccountController {
         return ResponseEntity.ok(accountDtos);
     }
 
-    @Operation(
-            summary = "Get accounts by type",
-            description = "Retrieve accounts filtered by type (WALLET, BANK_ACCOUNT, SAVINGS, etc.)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved accounts by type"),
-            @ApiResponse(responseCode = "400", description = "Invalid account type"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<AccountListDTO>> getAccountsByType(
-            @Parameter(description = "Account type", required = true) @PathVariable String type) {
-        
+    public ResponseEntity<List<AccountListDTO>> getAccountsByType(@PathVariable String type) {
         try {
             Account.AccountType accountType = Account.AccountType.valueOf(type.toUpperCase());
             List<Account> accounts = accountService.getAccountsByType(accountType);
@@ -173,19 +67,9 @@ public class AccountController {
         }
     }
 
-    @Operation(
-            summary = "Get active accounts by type",
-            description = "Retrieve active accounts filtered by type"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved active accounts by type"),
-            @ApiResponse(responseCode = "400", description = "Invalid account type"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/active/type/{type}")
-    public ResponseEntity<List<AccountListDTO>> getActiveAccountsByType(
-            @Parameter(description = "Account type", required = true) @PathVariable String type) {
-        
+    public ResponseEntity<List<AccountListDTO>> getActiveAccountsByType(@PathVariable String type) {
         try {
             Account.AccountType accountType = Account.AccountType.valueOf(type.toUpperCase());
             List<Account> accounts = accountService.getActiveAccountsByType(accountType);
@@ -198,14 +82,7 @@ public class AccountController {
         }
     }
 
-    @Operation(
-            summary = "Get accounts included in balance",
-            description = "Retrieve accounts that are included in total balance calculation"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved accounts included in balance"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/included-in-balance")
     public ResponseEntity<List<AccountListDTO>> getAccountsIncludedInBalance() {
         List<Account> accounts = accountService.getAccountsIncludedInBalance();
@@ -215,33 +92,16 @@ public class AccountController {
         return ResponseEntity.ok(accountDtos);
     }
 
-    @Operation(
-            summary = "Get total balance",
-            description = "Calculate total balance across all accounts included in balance calculation"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully calculated total balance"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/total-balance")
     public ResponseEntity<BigDecimal> getTotalBalance() {
         BigDecimal totalBalance = accountService.calculateTotalBalance();
         return ResponseEntity.ok(totalBalance);
     }
 
-    @Operation(
-            summary = "Get total balance by type",
-            description = "Calculate total balance for a specific account type"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully calculated total balance by type"),
-            @ApiResponse(responseCode = "400", description = "Invalid account type"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/total-balance/type/{type}")
-    public ResponseEntity<BigDecimal> getTotalBalanceByType(
-            @Parameter(description = "Account type", required = true) @PathVariable String type) {
-        
+    public ResponseEntity<BigDecimal> getTotalBalanceByType(@PathVariable String type) {
         try {
             Account.AccountType accountType = Account.AccountType.valueOf(type.toUpperCase());
             BigDecimal totalBalance = accountService.calculateTotalBalanceByType(accountType);
@@ -251,37 +111,18 @@ public class AccountController {
         }
     }
 
-    @Operation(
-            summary = "Get account by ID",
-            description = "Retrieve a specific account by its ID"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Account found"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/{id}")
-    public ResponseEntity<AccountDto> getAccountById(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<AccountDto> getAccountById(@PathVariable Long id) {
         Optional<Account> account = accountService.getAccountById(id);
         return account.map(accountMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(
-            summary = "Search accounts by name",
-            description = "Search accounts by name containing the provided text (case-insensitive)"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved matching accounts"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/search")
-    public ResponseEntity<List<AccountListDTO>> searchAccountsByName(
-            @Parameter(description = "Name pattern to search for") @RequestParam String name) {
-        
+    public ResponseEntity<List<AccountListDTO>> searchAccountsByName(@RequestParam String name) {
         List<Account> accounts = accountService.searchAccountsByName(name);
         List<AccountListDTO> accountDtos = accounts.stream()
                 .map(AccountListDTO::fromEntity)
@@ -289,18 +130,9 @@ public class AccountController {
         return ResponseEntity.ok(accountDtos);
     }
 
-    @Operation(
-            summary = "Search active accounts by name",
-            description = "Search active accounts by name containing the provided text"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved matching active accounts"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping("/active/search")
-    public ResponseEntity<List<AccountListDTO>> searchActiveAccountsByName(
-            @Parameter(description = "Name pattern to search for") @RequestParam String name) {
-        
+    public ResponseEntity<List<AccountListDTO>> searchActiveAccountsByName(@RequestParam String name) {
         List<Account> accounts = accountService.searchActiveAccountsByName(name);
         List<AccountListDTO> accountDtos = accounts.stream()
                 .map(AccountListDTO::fromEntity)
@@ -308,21 +140,39 @@ public class AccountController {
         return ResponseEntity.ok(accountDtos);
     }
 
+    @Override
+    @PostMapping
+    public ResponseEntity<AccountDto> createAccount(@Valid @RequestBody AccountCreateRequestDto request) {
+        try {
+            Account account = Account.builder()
+                    .name(request.getName())
+                    .description(request.getDescription())
+                    .type(request.getType())
+                    .balance(request.getInitialBalance())
+                    .currency(request.getCurrency())
+                    .accountNumber(request.getAccountNumber())
+                    .bankName(request.getBankName())
+                    .color(request.getColor())
+                    .icon(request.getIcon())
+                    .status(Account.AccountStatus.ACTIVE)
+                    .includeInBalance(request.getIncludeInBalance() != null ? request.getIncludeInBalance() : true)
+                    .build();
+            
+            Account createdAccount = accountService.createAccount(account);
+            AccountDto response = accountMapper.toDto(createdAccount);
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            log.error("Error creating account: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
 
-    @Operation(
-            summary = "Update account",
-            description = "Update an existing account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Account updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Bad request - validation errors or duplicate name"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PutMapping("/{id}")
     public ResponseEntity<AccountDto> updateAccount(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long id,
-            @Valid @RequestBody AccountDto accountDto) {
+            @PathVariable Long id,
+            @Valid @RequestBody AccountUpdateRequestDto request) {
         
         try {
             // Fetch existing account
@@ -333,13 +183,42 @@ public class AccountController {
             
             // Update fields from DTO
             Account existingAccount = existingAccountOpt.get();
-            accountMapper.updateEntityFromDto(existingAccount, accountDto);
+            existingAccount.setName(request.getName());
+            existingAccount.setDescription(request.getDescription());
+            if (request.getType() != null) {
+                existingAccount.setType(request.getType());
+            }
+            if (request.getBalance() != null) {
+                existingAccount.setBalance(request.getBalance());
+            }
+            if (request.getCurrency() != null) {
+                existingAccount.setCurrency(request.getCurrency());
+            }
+            if (request.getAccountNumber() != null) {
+                existingAccount.setAccountNumber(request.getAccountNumber());
+            }
+            if (request.getBankName() != null) {
+                existingAccount.setBankName(request.getBankName());
+            }
+            if (request.getStatus() != null) {
+                existingAccount.setStatus(request.getStatus());
+            }
+            if (request.getColor() != null) {
+                existingAccount.setColor(request.getColor());
+            }
+            if (request.getIcon() != null) {
+                existingAccount.setIcon(request.getIcon());
+            }
+            if (request.getIncludeInBalance() != null) {
+                existingAccount.setIncludeInBalance(request.getIncludeInBalance());
+            }
             
             // Save updated account
             Account updatedAccount = accountService.updateAccount(existingAccount);
             return ResponseEntity.ok(accountMapper.toDto(updatedAccount));
         } catch (IllegalArgumentException e) {
             // Duplicate name error
+            log.error("Error updating account: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             // Log the actual exception for debugging
@@ -348,19 +227,11 @@ public class AccountController {
         }
     }
 
-    @Operation(
-            summary = "Update account balance",
-            description = "Update the balance of a specific account"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Account balance updated successfully"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PatchMapping("/{id}/balance")
     public ResponseEntity<AccountDto> updateAccountBalance(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long id,
-            @Parameter(description = "New balance") @RequestParam BigDecimal balance) {
+            @PathVariable Long id,
+            @RequestParam BigDecimal balance) {
         
         try {
             Account account = accountService.updateAccountBalance(id, balance);
@@ -370,19 +241,11 @@ public class AccountController {
         }
     }
 
-    @Operation(
-            summary = "Add amount to account balance",
-            description = "Add a specific amount to an account's balance"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Amount added successfully"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PatchMapping("/{id}/add")
     public ResponseEntity<AccountDto> addToAccountBalance(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long id,
-            @Parameter(description = "Amount to add") @RequestParam BigDecimal amount) {
+            @PathVariable Long id,
+            @RequestParam BigDecimal amount) {
         
         try {
             Account account = accountService.addToAccountBalance(id, amount);
@@ -392,19 +255,11 @@ public class AccountController {
         }
     }
 
-    @Operation(
-            summary = "Subtract amount from account balance",
-            description = "Subtract a specific amount from an account's balance"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Amount subtracted successfully"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @PatchMapping("/{id}/subtract")
     public ResponseEntity<AccountDto> subtractFromAccountBalance(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long id,
-            @Parameter(description = "Amount to subtract") @RequestParam BigDecimal amount) {
+            @PathVariable Long id,
+            @RequestParam BigDecimal amount) {
         
         try {
             Account account = accountService.subtractFromAccountBalance(id, amount);
@@ -414,19 +269,9 @@ public class AccountController {
         }
     }
 
-    @Operation(
-            summary = "Delete account",
-            description = "Delete an account from the system"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Account deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAccount(
-            @Parameter(description = "Account ID", required = true) @PathVariable Long id) {
-        
+    public ResponseEntity<Void> deleteAccount(@PathVariable Long id) {
         try {
             accountService.deleteAccount(id);
             return ResponseEntity.noContent().build();

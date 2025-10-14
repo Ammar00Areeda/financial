@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -171,6 +172,36 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /**
+     * Handle HTTP message not readable exception (e.g., invalid JSON, invalid enum values).
+     *
+     * @param ex the exception
+     * @return error response
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        log.error("HTTP message not readable: {}", ex.getMessage());
+        
+        String message = "Invalid request body";
+        if (ex.getCause() != null) {
+            String causeMessage = ex.getCause().getMessage();
+            if (causeMessage != null && causeMessage.contains("not one of the values accepted for Enum class")) {
+                message = "Invalid value for enum field. Please check the allowed values.";
+            } else if (causeMessage != null) {
+                message = "Invalid request format: " + causeMessage;
+            }
+        }
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(message)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     /**

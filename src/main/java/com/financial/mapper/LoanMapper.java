@@ -1,11 +1,16 @@
 package com.financial.mapper;
 
+import com.financial.dto.LoanCreateRequestDto;
 import com.financial.dto.LoanDto;
+import com.financial.dto.LoanResponseDto;
+import com.financial.dto.LoanUpdateRequestDto;
 import com.financial.entity.Loan;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+
 /**
- * Mapper for converting between Loan entity and LoanDto.
+ * Mapper for converting between Loan entity and DTOs.
  */
 @Component
 public class LoanMapper {
@@ -97,5 +102,109 @@ public class LoanMapper {
         entity.setReminderEnabled(dto.getReminderEnabled());
         entity.setNextReminderDate(dto.getNextReminderDate());
         // Note: Account will be set separately in the service
+    }
+    
+    // ========== NEW DTO MAPPING METHODS ==========
+    
+    /**
+     * Convert LoanCreateRequestDto to Loan entity.
+     *
+     * @param requestDto the create request DTO
+     * @return Loan entity
+     */
+    public Loan toEntityFromCreateRequest(LoanCreateRequestDto requestDto) {
+        if (requestDto == null) {
+            return null;
+        }
+        
+        return Loan.builder()
+                .personName(requestDto.getPersonName())
+                .phoneNumber(requestDto.getPhoneNumber())
+                .email(requestDto.getEmail())
+                .loanType(requestDto.getLoanType())
+                .principalAmount(requestDto.getPrincipalAmount())
+                .interestRate(requestDto.getInterestRate())
+                .loanDate(requestDto.getLoanDate())
+                .dueDate(requestDto.getDueDate())
+                .description(requestDto.getDescription())
+                .notes(requestDto.getNotes())
+                .isUrgent(requestDto.getIsUrgent())
+                .reminderEnabled(requestDto.getReminderEnabled())
+                .nextReminderDate(requestDto.getNextReminderDate())
+                .status(Loan.LoanStatus.ACTIVE) // Default status for new loans
+                .paidAmount(BigDecimal.ZERO) // Default paid amount
+                // Note: Account will be set separately in the service
+                // Note: totalAmount and remainingAmount are calculated in the service
+                .build();
+    }
+    
+    /**
+     * Convert LoanUpdateRequestDto to Loan entity.
+     *
+     * @param requestDto the update request DTO
+     * @return Loan entity
+     */
+    public Loan toEntityFromUpdateRequest(LoanUpdateRequestDto requestDto) {
+        if (requestDto == null) {
+            return null;
+        }
+        
+        return Loan.builder()
+                .personName(requestDto.getPersonName())
+                .phoneNumber(requestDto.getPhoneNumber())
+                .email(requestDto.getEmail())
+                .loanType(requestDto.getLoanType())
+                .principalAmount(requestDto.getPrincipalAmount())
+                .interestRate(requestDto.getInterestRate())
+                .loanDate(requestDto.getLoanDate())
+                .dueDate(requestDto.getDueDate())
+                .status(requestDto.getStatus())
+                .description(requestDto.getDescription())
+                .notes(requestDto.getNotes())
+                .isUrgent(requestDto.getIsUrgent())
+                .reminderEnabled(requestDto.getReminderEnabled())
+                .nextReminderDate(requestDto.getNextReminderDate())
+                // Note: Account will be set separately in the service
+                // Note: Payment amounts should not be updated here
+                .build();
+    }
+    
+    /**
+     * Update existing Loan entity from LoanUpdateRequestDto.
+     *
+     * @param entity the existing entity
+     * @param requestDto the update request DTO
+     */
+    public void updateEntityFromUpdateRequest(Loan entity, LoanUpdateRequestDto requestDto) {
+        if (entity == null || requestDto == null) {
+            return;
+        }
+        
+        entity.setPersonName(requestDto.getPersonName());
+        entity.setPhoneNumber(requestDto.getPhoneNumber());
+        entity.setEmail(requestDto.getEmail());
+        entity.setLoanType(requestDto.getLoanType());
+        entity.setPrincipalAmount(requestDto.getPrincipalAmount());
+        entity.setInterestRate(requestDto.getInterestRate());
+        entity.setLoanDate(requestDto.getLoanDate());
+        entity.setDueDate(requestDto.getDueDate());
+        entity.setStatus(requestDto.getStatus());
+        entity.setDescription(requestDto.getDescription());
+        entity.setNotes(requestDto.getNotes());
+        entity.setIsUrgent(requestDto.getIsUrgent());
+        entity.setReminderEnabled(requestDto.getReminderEnabled());
+        entity.setNextReminderDate(requestDto.getNextReminderDate());
+        // Note: Account will be set separately in the service
+        // Note: Payment amounts and computed fields are not updated here
+    }
+    
+    /**
+     * Convert Loan entity to LoanResponseDto.
+     *
+     * @param loan the loan entity
+     * @return LoanResponseDto
+     */
+    public LoanResponseDto toResponseDto(Loan loan) {
+        return LoanResponseDto.fromEntity(loan);
     }
 }

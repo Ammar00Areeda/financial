@@ -1,11 +1,10 @@
 package com.financial.controller;
 
-import com.financial.dto.UserDto;
+import com.financial.dto.UserResponseDto;
+import com.financial.dto.UserUpdateRequestDto;
 import com.financial.entity.User;
 import com.financial.service.UserService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -18,25 +17,19 @@ import java.util.List;
 
 /**
  * REST controller for user management operations.
+ * Implements UserApi interface which contains all OpenAPI documentation.
  */
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Users", description = "User management endpoints (Admin only)")
-@SecurityRequirement(name = "Bearer Authentication")
-public class UserController {
+public class UserController implements UserApi {
 
     private final UserService userService;
 
-    /**
-     * Get current authenticated user.
-     *
-     * @return the current user
-     */
+    @Override
     @GetMapping("/me")
-    @Operation(summary = "Get current user", description = "Returns the currently authenticated user")
-    public ResponseEntity<UserDto> getCurrentUser() {
+    public ResponseEntity<UserResponseDto> getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         
@@ -45,97 +38,61 @@ public class UserController {
         User user = userService.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        return ResponseEntity.ok(UserDto.fromEntity(user));
+        return ResponseEntity.ok(UserResponseDto.fromEntity(user));
     }
 
-    /**
-     * Get all users (Admin only).
-     *
-     * @return list of all users
-     */
+    @Override
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get all users", description = "Returns all users (Admin only)")
-    public ResponseEntity<List<UserDto>> getAllUsers() {
+    public ResponseEntity<List<UserResponseDto>> getAllUsers() {
         log.debug("Fetching all users");
         
-        List<UserDto> users = userService.findAll()
+        List<UserResponseDto> users = userService.findAll()
                 .stream()
-                .map(UserDto::fromEntity)
+                .map(UserResponseDto::fromEntity)
                 .toList();
         
         return ResponseEntity.ok(users);
     }
 
-    /**
-     * Get user by ID (Admin only).
-     *
-     * @param id the user ID
-     * @return the user
-     */
+    @Override
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get user by ID", description = "Returns a specific user (Admin only)")
-    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserResponseDto> getUserById(@PathVariable Long id) {
         log.debug("Fetching user with id: {}", id);
         
         User user = userService.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
         
-        return ResponseEntity.ok(UserDto.fromEntity(user));
+        return ResponseEntity.ok(UserResponseDto.fromEntity(user));
     }
 
-    /**
-     * Update user (Admin only).
-     *
-     * @param id the user ID
-     * @param updateRequest the update request
-     * @return the updated user
-     */
+    @Override
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Update user", description = "Updates a user (Admin only)")
-    public ResponseEntity<UserDto> updateUser(
+    public ResponseEntity<UserResponseDto> updateUser(
             @PathVariable Long id,
-            @RequestBody UserUpdateRequest updateRequest
-    ) {
+            @Valid @RequestBody UserUpdateRequestDto updateRequest) {
         log.info("Updating user with id: {}", id);
         
         User updateData = User.builder()
-                .email(updateRequest.email())
-                .firstName(updateRequest.firstName())
-                .lastName(updateRequest.lastName())
-                .password(updateRequest.password())
+                .email(updateRequest.getEmail())
+                .firstName(updateRequest.getFirstName())
+                .lastName(updateRequest.getLastName())
+                .password(updateRequest.getPassword())
                 .build();
         
         User updatedUser = userService.updateUser(id, updateData);
         
-        return ResponseEntity.ok(UserDto.fromEntity(updatedUser));
+        return ResponseEntity.ok(UserResponseDto.fromEntity(updatedUser));
     }
 
-    /**
-     * Delete user (Admin only).
-     *
-     * @param id the user ID
-     * @return no content
-     */
+    @Override
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Delete user", description = "Deletes a user (Admin only)")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         log.info("Deleting user with id: {}", id);
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
-
-    /**
-     * User update request DTO.
-     */
-    record UserUpdateRequest(
-            String email,
-            String firstName,
-            String lastName,
-            String password
-    ) {}
 }
-

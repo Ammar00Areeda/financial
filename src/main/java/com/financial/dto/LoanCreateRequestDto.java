@@ -16,15 +16,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * DTO for Loan entity.
+ * DTO for creating a new loan.
+ * Contains only fields that can be provided by the user during creation.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoanDto {
-    
-    private Long id;
+public class LoanCreateRequestDto {
     
     @NotBlank(message = "Person name is required")
     @Size(max = 100, message = "Person name must not exceed 100 characters")
@@ -48,23 +47,10 @@ public class LoanDto {
     @DecimalMin(value = "0.00", message = "Interest rate must be greater than or equal to 0")
     private BigDecimal interestRate;
     
-    @DecimalMin(value = "0.00", message = "Total amount must be greater than or equal to 0")
-    private BigDecimal totalAmount;
-    
-    @DecimalMin(value = "0.00", message = "Paid amount must be greater than or equal to 0")
-    private BigDecimal paidAmount;
-    
-    @DecimalMin(value = "0.00", message = "Remaining amount must be greater than or equal to 0")
-    private BigDecimal remainingAmount;
-    
     @NotNull(message = "Loan date is required")
     private LocalDateTime loanDate;
     
     private LocalDateTime dueDate;
-    
-    private LocalDateTime lastPaymentDate;
-    
-    private Loan.LoanStatus status;
     
     @Size(max = 500, message = "Description must not exceed 500 characters")
     private String description;
@@ -75,17 +61,13 @@ public class LoanDto {
     @NotNull(message = "Account ID is required")
     private Long accountId;
     
-    private String accountName; // For display purposes
+    @Builder.Default
+    private Boolean isUrgent = false;
     
-    private Boolean isUrgent;
-    
-    private Boolean reminderEnabled;
+    @Builder.Default
+    private Boolean reminderEnabled = true;
     
     private LocalDateTime nextReminderDate;
-    
-    private LocalDateTime createdAt;
-    
-    private LocalDateTime updatedAt;
 }
 
 

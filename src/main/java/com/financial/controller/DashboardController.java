@@ -7,11 +7,6 @@ import com.financial.entity.Transaction;
 import com.financial.service.AccountService;
 import com.financial.service.LoanService;
 import com.financial.service.TransactionService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,29 +22,20 @@ import java.util.stream.Collectors;
 
 /**
  * REST controller for Dashboard operations.
+ * Implements DashboardApi interface which contains all OpenAPI documentation.
  */
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
-@Tag(name = "Dashboard", description = "Dashboard data and overview operations")
-@SecurityRequirement(name = "Bearer Authentication")
-public class DashboardController {
+public class DashboardController implements DashboardApi {
 
     private final AccountService accountService;
     private final TransactionService transactionService;
     private final LoanService loanService;
 
-    @Operation(
-            summary = "Get dashboard data",
-            description = "Retrieve comprehensive dashboard data including net worth, accounts, recent transactions, active loans, and monthly spending"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved dashboard data"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
+    @Override
     @GetMapping
     public ResponseEntity<DashboardDto> getDashboard() {
-        
         // Get all accounts
         List<Account> accounts = accountService.getAllAccounts();
         
