@@ -6,23 +6,21 @@ server:
 spring:
   application:
     name: financial
-  profiles:
-    active: production
   
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/financial_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8}
-    username: ${DB_USERNAME:financial_user}
-    password: ${DB_PASSWORD:financial_password}
+    url: jdbc:mysql://${PROD_DB_HOST}:${PROD_DB_PORT}/${PROD_DB_NAME}?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+    username: ${PROD_DB_USERNAME}
+    password: ${PROD_DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: true
+        format_sql: false
 
 flyway:
   enabled: true
@@ -30,7 +28,7 @@ flyway:
   baseline-on-migrate: true
   baseline-version: 0
   validate-on-migrate: true
-  clean-disabled: false
+  clean-disabled: true
 
 springdoc:
   api-docs:
@@ -39,7 +37,7 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
     tagsSorter: alpha
-    tryItOutEnabled: true
+    tryItOutEnabled: false
     config-url: /v3/api-docs/swagger-config
     url: /v3/api-docs
   show-actuator: true
@@ -49,13 +47,13 @@ springdoc:
 
 logging:
   level:
-    com.financial: INFO
-    org.springframework.web: INFO
-    org.flywaydb: DEBUG
-    org.springframework.security: DEBUG
+    com.financial: WARN
+    org.springframework.web: WARN
+    org.flywaydb: INFO
+    org.springframework.security: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 
 jwt:
-  secret: mySecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLongForHS256Algorithm
-  expiration: 86400000  # 24 hours in milliseconds
+  secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLongForHS256Algorithm}
+  expiration: ${JWT_EXPIRATION:86400000}  # 24 hours in milliseconds

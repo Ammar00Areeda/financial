@@ -39,6 +39,16 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findByUserOrSystem(@Param("user") User user);
     
     /**
+     * Find all categories for user (including system categories) with pagination.
+     *
+     * @param user the user
+     * @param pageable pagination information
+     * @return page of categories
+     */
+    @Query("SELECT c FROM Category c WHERE c.user = :user OR c.user IS NULL")
+    Page<Category> findByUserOrSystem(@Param("user") User user, Pageable pageable);
+    
+    /**
      * Find categories by user and type (including system categories).
      *
      * @param user the user
@@ -57,6 +67,17 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
      */
     @Query("SELECT c FROM Category c WHERE (c.user = :user OR c.user IS NULL) AND c.isActive = :isActive")
     List<Category> findByUserOrSystemAndIsActive(@Param("user") User user, @Param("isActive") Boolean isActive);
+    
+    /**
+     * Find active categories by user (including system categories) with pagination.
+     *
+     * @param user the user
+     * @param isActive whether the category is active
+     * @param pageable pagination information
+     * @return page of active categories
+     */
+    @Query("SELECT c FROM Category c WHERE (c.user = :user OR c.user IS NULL) AND c.isActive = :isActive")
+    Page<Category> findByUserOrSystemAndIsActive(@Param("user") User user, @Param("isActive") Boolean isActive, Pageable pageable);
     
     /**
      * Find category by name.

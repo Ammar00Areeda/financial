@@ -41,6 +41,8 @@ tags:
     description: Account management operations
   - name: Transactions
     description: Transaction processing and history
+  - name: Net Worth
+    description: Net worth calculations and financial overview
   - name: Health
     description: System health and monitoring
 
@@ -631,6 +633,130 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /net-worth:
+    get:
+      tags:
+        - Net Worth
+      summary: Get comprehensive net worth information
+      description: |
+        Calculates and returns complete net worth information including account balances, 
+        loan positions, and detailed breakdowns by type for the authenticated user.
+      operationId: getNetWorth
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Net worth information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetWorthResponse'
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /net-worth/total:
+    get:
+      tags:
+        - Net Worth
+      summary: Get total net worth
+      description: Returns the total net worth as a simple number without detailed breakdowns.
+      operationId: getTotalNetWorth
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Total net worth retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: number
+                format: decimal
+                example: 15000.00
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /net-worth/accounts:
+    get:
+      tags:
+        - Net Worth
+      summary: Get account balances by type
+      description: Returns account balance breakdown by account type without loan information.
+      operationId: getAccountBalancesByType
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Account balances retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountTypeBalance'
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /net-worth/loans:
+    get:
+      tags:
+        - Net Worth
+      summary: Get loan summary by type
+      description: Returns loan summary breakdown by loan type without account information.
+      operationId: getLoanSummaryByType
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Loan summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LoanTypeSummary'
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /health:
     get:
       tags:
@@ -1062,6 +1188,153 @@ components:
                     type: string
                     example: "invalid-email"
 
+    NetWorthResponse:
+      type: object
+      required:
+        - totalNetWorth
+        - totalAccountBalance
+        - netLoanPosition
+        - totalAmountLent
+        - totalAmountBorrowed
+        - accountBalancesByType
+        - loanSummaryByType
+        - activeAccountsCount
+        - activeLoansCount
+        - overdueLoansCount
+        - currency
+        - calculatedAt
+      properties:
+        totalNetWorth:
+          type: number
+          format: decimal
+          description: Total net worth calculated as Account Balance + Net Loan Position
+          example: 15000.00
+        totalAccountBalance:
+          type: number
+          format: decimal
+          description: Total balance across all accounts included in balance calculations
+          example: 12000.00
+        netLoanPosition:
+          type: number
+          format: decimal
+          description: Net loan position (money lent to others - money borrowed from others)
+          example: 3000.00
+        totalAmountLent:
+          type: number
+          format: decimal
+          description: Total amount of money lent to others (outstanding)
+          example: 5000.00
+        totalAmountBorrowed:
+          type: number
+          format: decimal
+          description: Total amount of money borrowed from others (outstanding)
+          example: 2000.00
+        accountBalancesByType:
+          type: array
+          description: Breakdown of account balances by account type
+          items:
+            $ref: '#/components/schemas/AccountTypeBalance'
+        loanSummaryByType:
+          type: array
+          description: Breakdown of loan amounts by loan type
+          items:
+            $ref: '#/components/schemas/LoanTypeSummary'
+        activeAccountsCount:
+          type: integer
+          description: Number of active accounts included in balance calculation
+          example: 3
+        activeLoansCount:
+          type: integer
+          description: Number of active loans (both lent and borrowed)
+          example: 2
+        overdueLoansCount:
+          type: integer
+          description: Number of overdue loans
+          example: 0
+        currency:
+          type: string
+          description: Currency used for all amounts
+          example: "JD"
+        calculatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the net worth was calculated
+          example: "2024-01-15T10:30:00"
+
+    AccountTypeBalance:
+      type: object
+      required:
+        - accountType
+        - accountTypeDisplayName
+        - totalBalance
+        - accountCount
+      properties:
+        accountType:
+          type: string
+          description: Account type enum value
+          example: "SAVINGS"
+        accountTypeDisplayName:
+          type: string
+          description: Human-readable account type name
+          example: "Savings"
+        totalBalance:
+          type: number
+          format: decimal
+          description: Total balance for this account type
+          example: 8000.00
+        accountCount:
+          type: integer
+          description: Number of accounts of this type
+          example: 2
+
+    LoanTypeSummary:
+      type: object
+      required:
+        - loanType
+        - loanTypeDisplayName
+        - totalAmount
+        - totalPaid
+        - remainingAmount
+        - loanCount
+        - activeLoanCount
+        - overdueLoanCount
+      properties:
+        loanType:
+          type: string
+          description: Loan type enum value
+          example: "LENT"
+        loanTypeDisplayName:
+          type: string
+          description: Human-readable loan type name
+          example: "Lent Money"
+        totalAmount:
+          type: number
+          format: decimal
+          description: Total amount for this loan type
+          example: 5000.00
+        totalPaid:
+          type: number
+          format: decimal
+          description: Total amount paid for this loan type
+          example: 2000.00
+        remainingAmount:
+          type: number
+          format: decimal
+          description: Remaining amount for this loan type
+          example: 3000.00
+        loanCount:
+          type: integer
+          description: Total number of loans of this type
+          example: 3
+        activeLoanCount:
+          type: integer
+          description: Number of active loans of this type
+          example: 2
+        overdueLoanCount:
+          type: integer
+          description: Number of overdue loans of this type
+          example: 0
+
   securitySchemes:
     ApiKeyAuth:
       type: apiKey
@@ -1078,6 +1351,7 @@ components:
 security:
   - ApiKeyAuth: []
   - BearerAuth: []
+
 
 
 

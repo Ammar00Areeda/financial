@@ -21,7 +21,7 @@ services:
       timeout: 20s
       retries: 10
 
-  # Spring Boot Application
+  # Spring Boot Application (Development)
   financial-app:
     build: .
     container_name: financial-app
@@ -29,7 +29,38 @@ services:
     ports:
       - "8081:8081"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      DB_URL: jdbc:mysql://mysql:3306/financial_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+      DB_USERNAME: financial_user
+      DB_PASSWORD: financial_password
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - financial-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/hello"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Spring Boot Application (Production)
+  financial-app-prod:
+    build: .
+    container_name: financial-app-prod
+    restart: unless-stopped
+    ports:
+      - "8082:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-production}
+      PROD_DB_HOST: ${PROD_DB_HOST:-mysql}
+      PROD_DB_PORT: ${PROD_DB_PORT:-3306}
+      PROD_DB_NAME: ${PROD_DB_NAME:-financial_db}
+      PROD_DB_USERNAME: ${PROD_DB_USERNAME:-financial_user}
+      PROD_DB_PASSWORD: ${PROD_DB_PASSWORD:-financial_password}
+      JWT_SECRET: ${JWT_SECRET:-mySecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLongForHS256Algorithm}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
     depends_on:
       mysql:
         condition: service_healthy

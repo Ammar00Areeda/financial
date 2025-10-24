@@ -8,9 +8,9 @@ spring:
     name: financial
 
   datasource:
-    url: jdbc:mysql://mysql:3306/financial_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
-    username: financial_user
-    password: financial_password
+    url: ${DB_URL:jdbc:mysql://mysql:3306/financial_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:financial_user}
+    password: ${DB_PASSWORD:financial_password}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:

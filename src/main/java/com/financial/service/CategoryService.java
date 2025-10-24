@@ -49,7 +49,7 @@ public class CategoryService {
      * <pre>{@code
      * Pageable pageable = PageRequest.of(0, 20);
      * Page<Category> categories = categoryService.getAllCategories(pageable);
-     * // Note: Current implementation returns empty page - see method body
+     * // Returns paginated categories for the authenticated user
      * }</pre>
      *
      * @param pageable pagination information including page number, size, and sort order
@@ -60,9 +60,7 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public Page<Category> getAllCategories(Pageable pageable) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        // Note: Need to convert List to Page - for now return from repository
-        List<Category> categories = categoryRepository.findByUserOrSystem(currentUser);
-        return Page.empty(pageable);
+        return categoryRepository.findByUserOrSystem(currentUser, pageable);
     }
     
     /**
@@ -96,8 +94,7 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public Page<Category> getAllActiveCategories(Pageable pageable) {
         User currentUser = SecurityUtils.getAuthenticatedUser();
-        List<Category> categories = categoryRepository.findByUserOrSystemAndIsActive(currentUser, true);
-        return Page.empty(pageable);
+        return categoryRepository.findByUserOrSystemAndIsActive(currentUser, Boolean.TRUE, pageable);
     }
     
     /**
