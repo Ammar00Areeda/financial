@@ -12,8 +12,8 @@ COPY pom.xml .
 # Make mvnw executable
 RUN chmod +x ./mvnw
 
-# Download dependencies (this layer will be cached if pom.xml doesn't change)
-RUN ./mvnw dependency:go-offline -B
+# Download dependencies (removed 'dependency:go-offline' step)
+# RUN ./mvnw dependency:go-offline -B
 
 # Copy source code
 COPY src src
@@ -37,7 +37,7 @@ COPY --from=0 /app/target/*.jar app.jar
 EXPOSE 8081
 
 # Set JVM options for container
-ENV JAVA_OPTS="-Xmx512m -Xms256m"
+ENV JAVA_OPTS="-Xmx1g -Xms512m -XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
 # Run the application
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
