@@ -23,6 +23,8 @@ import java.util.List;
 @SecurityRequirement(name = "Bearer Authentication")
 public interface LoanApi {
 
+
+
     @Operation(
             summary = "Get all loans with pagination",
             description = "Retrieve a list of all loans with pagination support"
