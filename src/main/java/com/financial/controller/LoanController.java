@@ -2,6 +2,8 @@ package com.financial.controller;
 
 import com.financial.dto.LoanCreateRequestDto;
 import com.financial.dto.LoanDto;
+import com.financial.dto.LoanInstallmentRequestDto;
+import com.financial.dto.LoanInstallmentResponseDto;
 import com.financial.dto.LoanListDTO;
 import com.financial.dto.LoanResponseDto;
 import com.financial.dto.LoanUpdateRequestDto;
@@ -279,6 +281,21 @@ public class LoanController implements LoanApi {
             Loan loan = loanService.recordPayment(id, paymentAmount);
             return ResponseEntity.ok(loan);
         } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{loanId}/installments")
+    public ResponseEntity<LoanInstallmentResponseDto> recordInstallmentPayment(
+            @PathVariable Long loanId,
+            @Valid @RequestBody LoanInstallmentRequestDto request) {
+        
+        try {
+            LoanInstallmentResponseDto response = loanService.recordInstallmentPayment(loanId, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
     }

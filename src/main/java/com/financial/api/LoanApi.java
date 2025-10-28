@@ -1,6 +1,8 @@
 package com.financial.api;
 
 import com.financial.dto.LoanDto;
+import com.financial.dto.LoanInstallmentRequestDto;
+import com.financial.dto.LoanInstallmentResponseDto;
 import com.financial.dto.LoanListDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,8 +24,6 @@ import java.util.List;
 @Tag(name = "Loans", description = "Loan management operations")
 @SecurityRequirement(name = "Bearer Authentication")
 public interface LoanApi {
-
-
 
     @Operation(
             summary = "Get all loans with pagination",
@@ -158,6 +158,20 @@ public interface LoanApi {
     ResponseEntity<LoanDto> recordPayment(
             @Parameter(description = "Loan ID", required = true) Long id,
             @Parameter(description = "Payment amount") BigDecimal amount);
+
+    @Operation(
+            summary = "Record loan installment payment",
+            description = "Record an installment payment against a loan with account balance update"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Installment payment recorded successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad request - validation errors or insufficient balance"),
+            @ApiResponse(responseCode = "404", description = "Loan or account not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    ResponseEntity<LoanInstallmentResponseDto> recordInstallmentPayment(
+            @Parameter(description = "Loan ID", required = true) Long loanId,
+            @Parameter(description = "Installment payment request") LoanInstallmentRequestDto request);
 
     @Operation(
             summary = "Mark loan as urgent",

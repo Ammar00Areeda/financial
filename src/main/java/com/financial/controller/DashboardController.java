@@ -1,6 +1,7 @@
 package com.financial.controller;
 
 import com.financial.dto.DashboardDto;
+import com.financial.dto.DashboardTotalDto;
 import com.financial.entity.Account;
 import com.financial.entity.Loan;
 import com.financial.entity.Transaction;
@@ -103,6 +104,49 @@ public class DashboardController implements DashboardApi {
                 .build();
         
         return ResponseEntity.ok(dashboard);
+    }
+
+    @Override
+    @GetMapping("/total")
+    public ResponseEntity<DashboardTotalDto> getTotal() {
+        // Get all accounts
+        List<Account> accounts = accountService.getAllAccounts();
+        
+        // Calculate total account balance (sum of all account balances)
+        BigDecimal totalAccountBalance = accounts.stream()
+                .filter(Account::getIncludeInBalance)
+                .map(Account::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Get all active loans
+        List<Loan> activeLoans = loanService.getLoansByStatus(Loan.LoanStatus.ACTIVE);
+        
+        // Calculate outstanding loans
+        BigDecimal givenLoans = activeLoans.stream()
+                .filter(loan -> loan.getLoanType() == Loan.LoanType.LENT)
+                .map(loan -> loan.getRemainingAmount() != null ? loan.getRemainingAmount() : loan.getTotalAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal receivedLoans = activeLoans.stream()
+                .filter(loan -> loan.getLoanType() == Loan.LoanType.BORROWED)
+                .map(loan -> loan.getRemainingAmount() != null ? loan.getRemainingAmount() : loan.getTotalAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Calculate total: accounts + given loans - received loans
+        BigDecimal total = totalAccountBalance.add(givenLoans).subtract(receivedLoans);
+        
+        // Build response
+        DashboardTotalDto response = DashboardTotalDto.builder()
+                .total(total)
+                .currency("USD") // Default currency
+                .lastUpdated(LocalDateTime.now())
+                .outstandingLoans(DashboardTotalDto.OutstandingLoansDto.builder()
+                        .given(givenLoans)
+                        .received(receivedLoans)
+                        .build())
+                .build();
+        
+        return ResponseEntity.ok(response);
     }
     
     private List<DashboardDto.SpendingBreakdownDto> getMonthlySpendingBreakdown() {

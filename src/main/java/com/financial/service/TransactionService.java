@@ -411,7 +411,67 @@ public class TransactionService {
         // Associate transaction with current user
         transaction.setUser(currentUser);
 
-        return transactionRepository.save(transaction);
+        // Save the transaction first
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        // Update account balance based on transaction type
+        if (transaction.getAccount() != null) {
+            Long accountId = transaction.getAccount().getId();
+            BigDecimal amount = transaction.getAmount();
+            
+            switch (transaction.getType()) {
+                case INCOME:
+                    // Income increases account balance
+                    accountService.addToAccountBalance(accountId, amount);
+                    break;
+                case EXPENSE:
+                    // Expense decreases account balance
+                    // Check if account has sufficient balance for expense
+                    Account account = accountService.getAccountById(accountId)
+                            .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                    
+                    if (account.getBalance().compareTo(amount) < 0) {
+                        throw new IllegalArgumentException(
+                            String.format("Insufficient balance in account '%s'. Available: %s, Required: %s",
+                                account.getName(), 
+                                account.getBalance(), 
+                                amount)
+                        );
+                    }
+                    
+                    accountService.subtractFromAccountBalance(accountId, amount);
+                    break;
+                case TRANSFER:
+                    // For transfers, we need to handle both accounts
+                    if (transaction.getTransferToAccount() != null) {
+                        // Verify transfer destination account belongs to user
+                        accountService.getAccountById(transaction.getTransferToAccount().getId())
+                                .orElseThrow(() -> new IllegalArgumentException("Transfer destination account not found or doesn't belong to you"));
+                        
+                        // Check if source account has sufficient balance
+                        Account sourceAccount = accountService.getAccountById(accountId)
+                                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                        
+                        if (sourceAccount.getBalance().compareTo(amount) < 0) {
+                            throw new IllegalArgumentException(
+                                String.format("Insufficient balance in account '%s' for transfer. Available: %s, Required: %s",
+                                    sourceAccount.getName(), 
+                                    sourceAccount.getBalance(), 
+                                    amount)
+                            );
+                        }
+                        
+                        // Subtract from source account
+                        accountService.subtractFromAccountBalance(accountId, amount);
+                        
+                        // Add to destination account
+                        accountService.addToAccountBalance(transaction.getTransferToAccount().getId(), amount);
+                    }
+                    break;
+            }
+        }
+
+        return savedTransaction;
     }
 
     /**
@@ -458,7 +518,16 @@ public class TransactionService {
         // Ensure user association is not changed
         transaction.setUser(currentUser);
 
-        return transactionRepository.save(transaction);
+        // Reverse the effect of the existing transaction on account balance
+        reverseTransactionEffect(existingTransaction);
+
+        // Save the updated transaction
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        // Apply the effect of the new transaction on account balance
+        applyTransactionEffect(transaction);
+
+        return savedTransaction;
     }
 
     /**
@@ -491,6 +560,9 @@ public class TransactionService {
 
         Transaction transaction = transactionRepository.findByIdAndUser(id, currentUser)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction with ID " + id + " not found"));
+
+        // Reverse the effect of the transaction on account balance before deleting
+        reverseTransactionEffect(transaction);
 
         transactionRepository.delete(transaction);
     }
@@ -525,5 +597,105 @@ public class TransactionService {
                 .filter(t -> t.getLocation() != null &&
                         t.getLocation().toLowerCase().contains(location.toLowerCase()))
                 .toList();
+    }
+
+    /**
+     * Applies the effect of a transaction on account balance.
+     * 
+     * @param transaction the transaction to apply
+     */
+    private void applyTransactionEffect(Transaction transaction) {
+        if (transaction.getAccount() == null) {
+            return;
+        }
+
+        Long accountId = transaction.getAccount().getId();
+        BigDecimal amount = transaction.getAmount();
+        
+        switch (transaction.getType()) {
+            case INCOME:
+                // Income increases account balance
+                accountService.addToAccountBalance(accountId, amount);
+                break;
+            case EXPENSE:
+                // Expense decreases account balance
+                // Check if account has sufficient balance for expense
+                Account account = accountService.getAccountById(accountId)
+                        .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                
+                if (account.getBalance().compareTo(amount) < 0) {
+                    throw new IllegalArgumentException(
+                        String.format("Insufficient balance in account '%s'. Available: %s, Required: %s",
+                            account.getName(), 
+                            account.getBalance(), 
+                            amount)
+                    );
+                }
+                
+                accountService.subtractFromAccountBalance(accountId, amount);
+                break;
+            case TRANSFER:
+                // For transfers, we need to handle both accounts
+                if (transaction.getTransferToAccount() != null) {
+                    // Verify transfer destination account belongs to user
+                    accountService.getAccountById(transaction.getTransferToAccount().getId())
+                            .orElseThrow(() -> new IllegalArgumentException("Transfer destination account not found or doesn't belong to you"));
+                    
+                    // Check if source account has sufficient balance
+                    Account sourceAccount = accountService.getAccountById(accountId)
+                            .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                    
+                    if (sourceAccount.getBalance().compareTo(amount) < 0) {
+                        throw new IllegalArgumentException(
+                            String.format("Insufficient balance in account '%s' for transfer. Available: %s, Required: %s",
+                                sourceAccount.getName(), 
+                                sourceAccount.getBalance(), 
+                                amount)
+                        );
+                    }
+                    
+                    // Subtract from source account
+                    accountService.subtractFromAccountBalance(accountId, amount);
+                    
+                    // Add to destination account
+                    accountService.addToAccountBalance(transaction.getTransferToAccount().getId(), amount);
+                }
+                break;
+        }
+    }
+
+    /**
+     * Reverses the effect of a transaction on account balance.
+     * 
+     * @param transaction the transaction to reverse
+     */
+    private void reverseTransactionEffect(Transaction transaction) {
+        if (transaction.getAccount() == null) {
+            return;
+        }
+
+        Long accountId = transaction.getAccount().getId();
+        BigDecimal amount = transaction.getAmount();
+        
+        switch (transaction.getType()) {
+            case INCOME:
+                // Reverse income: subtract from account balance
+                accountService.subtractFromAccountBalance(accountId, amount);
+                break;
+            case EXPENSE:
+                // Reverse expense: add back to account balance
+                accountService.addToAccountBalance(accountId, amount);
+                break;
+            case TRANSFER:
+                // Reverse transfer: move money back
+                if (transaction.getTransferToAccount() != null) {
+                    // Add back to source account
+                    accountService.addToAccountBalance(accountId, amount);
+                    
+                    // Subtract from destination account
+                    accountService.subtractFromAccountBalance(transaction.getTransferToAccount().getId(), amount);
+                }
+                break;
+        }
     }
 }

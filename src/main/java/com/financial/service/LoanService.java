@@ -1,5 +1,7 @@
 package com.financial.service;
 
+import com.financial.dto.LoanInstallmentRequestDto;
+import com.financial.dto.LoanInstallmentResponseDto;
 import com.financial.entity.Account;
 import com.financial.entity.Loan;
 import com.financial.entity.User;
@@ -421,7 +423,7 @@ public class LoanService {
         User currentUser = SecurityUtils.getAuthenticatedUser();
         
         // Verify loan belongs to current user
-        Loan existingLoan = loanRepository.findByIdAndUser(loan.getId(), currentUser)
+        loanRepository.findByIdAndUser(loan.getId(), currentUser)
                 .orElseThrow(() -> new IllegalArgumentException("Loan with ID " + loan.getId() + " not found"));
         
         // Ensure user association is not changed
@@ -522,6 +524,117 @@ public class LoanService {
         }
         
         return loanRepository.save(loan);
+    }
+    
+    /**
+     * Records an installment payment for a loan belonging to the authenticated user.
+     * 
+     * <p>This method processes installment payments with account balance updates. It validates
+     * that the loan exists and belongs to the authenticated user, checks account balance
+     * sufficiency, updates loan amounts and status, and adjusts account balances accordingly.</p>
+     * 
+     * <p><b>Security:</b> Requires authentication. Only loans belonging to the
+     * authenticated user can have installment payments recorded.</p>
+     * 
+     * <p><b>Account Balance Logic:</b></p>
+     * <ul>
+     *   <li>For LENT loans: Payment is added back to the account (money returned)</li>
+     *   <li>For BORROWED loans: Payment is deducted from the account (money paid out)</li>
+     * </ul>
+     * 
+     * <p><b>Example:</b></p>
+     * <pre>{@code
+     * LoanInstallmentRequestDto request = LoanInstallmentRequestDto.builder()
+     *     .accountId(123L)
+     *     .amount(new BigDecimal("250.00"))
+     *     .note("Monthly installment payment")
+     *     .paidAt(LocalDateTime.now())
+     *     .build();
+     * 
+     * Loan loan = loanService.recordInstallmentPayment(456L, request);
+     * 
+     * System.out.println("Paid amount: $" + loan.getPaidAmount());
+     * System.out.println("Remaining: $" + loan.getRemainingAmount());
+     * System.out.println("Status: " + loan.getStatus());
+     * }</pre>
+     *
+     * @param loanId the ID of the loan to record installment payment for
+     * @param request the installment payment request containing account, amount, note, and payment date
+     * @return the installment payment response with all relevant information
+     * @throws IllegalArgumentException if the loan doesn't exist, doesn't belong to the
+     *         authenticated user, account not found, or insufficient account balance
+     * @throws org.springframework.security.authentication.AuthenticationCredentialsNotFoundException 
+     *         if no authenticated user is found
+     */
+    public LoanInstallmentResponseDto recordInstallmentPayment(Long loanId, LoanInstallmentRequestDto request) {
+        User currentUser = SecurityUtils.getAuthenticatedUser();
+        
+        // Find the loan and verify ownership
+        Loan loan = loanRepository.findByIdAndUser(loanId, currentUser)
+                .orElseThrow(() -> new IllegalArgumentException("Loan with ID " + loanId + " not found"));
+        
+        // Validate account exists and belongs to user
+        Account account = accountService.getAccountById(request.getAccountId())
+                .orElseThrow(() -> new IllegalArgumentException("Account with ID " + request.getAccountId() + " not found"));
+        
+        // Verify account belongs to the authenticated user
+        if (!account.getUser().getId().equals(currentUser.getId())) {
+            throw new IllegalArgumentException("Account does not belong to the authenticated user");
+        }
+        
+        BigDecimal paymentAmount = request.getAmount();
+        
+        // Update loan payment information
+        BigDecimal newPaidAmount = loan.getPaidAmount().add(paymentAmount);
+        loan.setPaidAmount(newPaidAmount);
+        loan.setLastPaymentDate(request.getPaidAt());
+        
+        // Update remaining amount
+        BigDecimal newRemainingAmount = loan.getTotalAmount().subtract(newPaidAmount);
+        loan.setRemainingAmount(newRemainingAmount);
+        
+        // Update status based on remaining amount
+        if (newRemainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            loan.setStatus(Loan.LoanStatus.PAID_OFF);
+        } else if (newPaidAmount.compareTo(BigDecimal.ZERO) > 0) {
+            loan.setStatus(Loan.LoanStatus.PARTIALLY_PAID);
+        }
+        
+        // Handle account balance updates based on loan type
+        if (loan.getLoanType() == Loan.LoanType.LENT) {
+            // If lending money, add the payment back to the account (money returned)
+            accountService.addToAccountBalance(request.getAccountId(), paymentAmount);
+        } else if (loan.getLoanType() == Loan.LoanType.BORROWED) {
+            // If borrowing money, subtract the payment from the account (money paid out)
+            
+            // Check if account has sufficient balance
+            if (account.getBalance().compareTo(paymentAmount) < 0) {
+                throw new IllegalArgumentException(
+                    String.format("Insufficient balance in account '%s'. Available: %s, Required: %s",
+                        account.getName(), 
+                        account.getBalance(), 
+                        paymentAmount)
+                );
+            }
+            
+            accountService.subtractFromAccountBalance(request.getAccountId(), paymentAmount);
+        }
+        
+        Loan savedLoan = loanRepository.save(loan);
+        
+        // Create and return the response DTO
+        return LoanInstallmentResponseDto.builder()
+                .installmentId(System.currentTimeMillis()) // Using timestamp as installment ID for now
+                .loanId(savedLoan.getId())
+                .accountId(request.getAccountId())
+                .amount(request.getAmount())
+                .currency(account.getCurrency())
+                .paidAt(request.getPaidAt())
+                .note(request.getNote())
+                .remainingBalance(savedLoan.getRemainingAmount())
+                .createdAt(LocalDateTime.now())
+                .status("APPLIED")
+                .build();
     }
     
     /**
