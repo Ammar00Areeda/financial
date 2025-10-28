@@ -118,18 +118,51 @@ public class DashboardController implements DashboardApi {
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        // Get all active loans
-        List<Loan> activeLoans = loanService.getLoansByStatus(Loan.LoanStatus.ACTIVE);
+        // Get all loans first to debug
+        List<Loan> allLoans = loanService.getAllLoans();
+        System.out.println("DEBUG: Found " + allLoans.size() + " total loans");
+        for (Loan loan : allLoans) {
+            System.out.println("DEBUG: All Loan ID=" + loan.getId() + 
+                            ", Type=" + loan.getLoanType() + 
+                            ", Status=" + loan.getStatus() + 
+                            ", RemainingAmount=" + loan.getRemainingAmount() + 
+                            ", TotalAmount=" + loan.getTotalAmount() + 
+                            ", PrincipalAmount=" + loan.getPrincipalAmount());
+        }
+        
+        // Get all loans (not just active ones) for total calculation
+        List<Loan> activeLoans = loanService.getAllLoans();
+        
+        // Debug: Log loan information
+        System.out.println("DEBUG: Found " + activeLoans.size() + " active loans");
+        for (Loan loan : activeLoans) {
+            System.out.println("DEBUG: Active Loan ID=" + loan.getId() + 
+                            ", Type=" + loan.getLoanType() + 
+                            ", Status=" + loan.getStatus() + 
+                            ", RemainingAmount=" + loan.getRemainingAmount() + 
+                            ", TotalAmount=" + loan.getTotalAmount() + 
+                            ", PrincipalAmount=" + loan.getPrincipalAmount());
+        }
         
         // Calculate outstanding loans
         BigDecimal givenLoans = activeLoans.stream()
                 .filter(loan -> loan.getLoanType() == Loan.LoanType.LENT)
-                .map(loan -> loan.getRemainingAmount() != null ? loan.getRemainingAmount() : loan.getTotalAmount())
+                .map(loan -> {
+                    BigDecimal amount = loan.getRemainingAmount() != null ? loan.getRemainingAmount() : 
+                                       (loan.getTotalAmount() != null ? loan.getTotalAmount() : loan.getPrincipalAmount());
+                    System.out.println("DEBUG: Given loan ID=" + loan.getId() + ", Amount=" + amount);
+                    return amount != null ? amount : BigDecimal.ZERO;
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         BigDecimal receivedLoans = activeLoans.stream()
                 .filter(loan -> loan.getLoanType() == Loan.LoanType.BORROWED)
-                .map(loan -> loan.getRemainingAmount() != null ? loan.getRemainingAmount() : loan.getTotalAmount())
+                .map(loan -> {
+                    BigDecimal amount = loan.getRemainingAmount() != null ? loan.getRemainingAmount() : 
+                                       (loan.getTotalAmount() != null ? loan.getTotalAmount() : loan.getPrincipalAmount());
+                    System.out.println("DEBUG: Received loan ID=" + loan.getId() + ", Amount=" + amount);
+                    return amount != null ? amount : BigDecimal.ZERO;
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         // Calculate total: accounts + given loans - received loans
